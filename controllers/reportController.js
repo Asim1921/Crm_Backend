@@ -13,6 +13,7 @@ const getDashboardStats = async (req, res) => {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const startOfWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
     // Build base query for role-based filtering
     let baseQuery = {};
@@ -33,11 +34,17 @@ const getDashboardStats = async (req, res) => {
 
     // Active agents (only for admin)
     let activeAgents = 0;
+    let newAgentsThisWeek = 0;
     if (req.user.role === 'admin') {
       activeAgents = await User.countDocuments({ role: 'agent', isActive: true });
+      newAgentsThisWeek = await User.countDocuments({ 
+        role: 'agent', 
+        isActive: true,
+        createdAt: { $gte: startOfWeek }
+      });
     }
 
-    // Pending tasks
+    // Tasks statistics
     const pendingTasks = await Task.countDocuments({
       ...baseQuery,
       status: { $in: ['pending', 'in-progress'] }
@@ -95,14 +102,24 @@ const getDashboardStats = async (req, res) => {
       return client;
     });
 
+    // Calculate percentage changes
+    const clientChangePercent = lastMonthClients > 0 
+      ? ((thisMonthClients - lastMonthClients) / lastMonthClients * 100).toFixed(1) 
+      : 0;
+    
+    const ftdChangePercent = ftdLastMonth > 0 
+      ? ((ftdThisMonth - ftdLastMonth) / ftdLastMonth * 100).toFixed(1) 
+      : 0;
+
     res.json({
       totalClients: {
         value: totalClients,
-        change: lastMonthClients > 0 ? ((thisMonthClients - lastMonthClients) / lastMonthClients * 100).toFixed(1) : 0
+        change: clientChangePercent > 0 ? `+${clientChangePercent}%` : `${clientChangePercent}%`,
+        changeValue: parseFloat(clientChangePercent)
       },
       activeAgents: {
         value: activeAgents,
-        change: '+3 new this week' // Mock data
+        change: newAgentsThisWeek > 0 ? `+${newAgentsThisWeek} new this week` : 'No new agents'
       },
       pendingTasks: {
         value: pendingTasks,
@@ -110,7 +127,8 @@ const getDashboardStats = async (req, res) => {
       },
       ftdThisMonth: {
         value: ftdThisMonth,
-        change: ftdLastMonth > 0 ? ((ftdThisMonth - ftdLastMonth) / ftdLastMonth * 100).toFixed(1) : 0
+        change: ftdChangePercent > 0 ? `+${ftdChangePercent}%` : `${ftdChangePercent}%`,
+        changeValue: parseFloat(ftdChangePercent)
       },
       leadStatusOverview,
       recentClients: filteredRecentClients
@@ -219,7 +237,81 @@ const getAnalytics = async (req, res) => {
   }
 };
 
+// @desc    Get user statistics
+// @route   GET /api/reports/users
+// @access  Private (Admin only)
+const getUserStats = async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    // Get all agents with their performance stats
+    const agents = await User.find({ role: 'agent' }).select('firstName lastName email isActive createdAt lastLogin');
+
+    const agentsWithStats = await Promise.all(
+      agents.map(async (agent) => {
+        // Count clients assigned to this agent
+        const totalClients = await Client.countDocuments({ assignedAgent: agent._id });
+        const ftdClients = await Client.countDocuments({ 
+          assignedAgent: agent._id, 
+          status: 'FTD' 
+        });
+        const thisMonthClients = await Client.countDocuments({
+          assignedAgent: agent._id,
+          createdAt: { $gte: startOfMonth }
+        });
+
+        // Count tasks assigned to this agent
+        const totalTasks = await Task.countDocuments({ assignedTo: agent._id });
+        const completedTasks = await Task.countDocuments({ 
+          assignedTo: agent._id, 
+          status: 'completed' 
+        });
+        const pendingTasks = await Task.countDocuments({ 
+          assignedTo: agent._id, 
+          status: { $in: ['pending', 'in-progress'] } 
+        });
+
+        // Calculate total value of clients
+        const totalValue = await Client.aggregate([
+          { $match: { assignedAgent: agent._id } },
+          { $group: { _id: null, total: { $sum: '$value' } } }
+        ]);
+
+        return {
+          _id: agent._id,
+          firstName: agent.firstName,
+          lastName: agent.lastName,
+          email: agent.email,
+          isActive: agent.isActive,
+          createdAt: agent.createdAt,
+          lastLogin: agent.lastLogin,
+          stats: {
+            totalClients,
+            ftdClients,
+            thisMonthClients,
+            totalTasks,
+            completedTasks,
+            pendingTasks,
+            totalValue: totalValue.length > 0 ? totalValue[0].total : 0,
+            completionRate: totalTasks > 0 ? ((completedTasks / totalTasks) * 100).toFixed(1) : 0
+          }
+        };
+      })
+    );
+
+    res.json(agentsWithStats);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   getDashboardStats,
-  getAnalytics
+  getAnalytics,
+  getUserStats
 };
