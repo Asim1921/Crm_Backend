@@ -33,6 +33,8 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/clients', require('./routes/clientRoutes'));
 app.use('/api/tasks', require('./routes/taskRoutes'));
 app.use('/api/reports', require('./routes/reportRoutes'));
+app.use('/api/users', require('./routes/userRoutes'));
+app.use('/api/communications', require('./routes/communicationRoutes'));
 
 // Error handling middleware
 app.use(require('./middleware/errorMiddleware'));

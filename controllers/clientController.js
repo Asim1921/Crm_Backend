@@ -309,6 +309,30 @@ const exportClients = async (req, res) => {
   }
 };
 
+// @desc    Delete client
+// @route   DELETE /api/clients/:id
+// @access  Private
+const deleteClient = async (req, res) => {
+  try {
+    const client = await Client.findById(req.params.id);
+
+    if (!client) {
+      return res.status(404).json({ message: 'Client not found' });
+    }
+
+    // Check permissions
+    if (req.user.role === 'agent' && client.assignedAgent.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    await Client.findByIdAndDelete(req.params.id);
+
+    res.json({ message: 'Client deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 // @desc    Import clients from Excel/CSV
 // @route   POST /api/clients/import
 // @access  Private (Admin only)
@@ -381,5 +405,6 @@ module.exports = {
   getAvailableAgents,
   assignClients,
   exportClients,
-  importClients
+  importClients,
+  deleteClient
 };

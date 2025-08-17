@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const User = require('./models/userModel');
 const Client = require('./models/clientModel');
 const Task = require('./models/taskModel');
+const Communication = require('./models/communicationModel');
 require('dotenv').config();
 
 const connectDB = async () => {
@@ -25,38 +26,60 @@ const seedData = async () => {
     await User.deleteMany({});
     await Client.deleteMany({});
     await Task.deleteMany({});
+    await Communication.deleteMany({});
 
-    // Create test users
+    // Create admin user
     const adminUser = await User.create({
       firstName: 'John',
       lastName: 'Anderson',
       email: 'admin@example.com',
       password: 'password123',
-      role: 'admin'
+      role: 'admin',
+      phone: '+1 (555) 123-4567',
+      bio: 'Experienced CRM administrator with 5+ years in client relationship management.',
+      company: 'CRM Platform',
+      title: 'Senior Administrator',
+      location: 'New York, NY'
     });
 
+    // Create agent users
     const agentUser1 = await User.create({
       firstName: 'Sarah',
       lastName: 'Wilson',
       email: 'agent@example.com',
       password: 'password123',
-      role: 'agent'
+      role: 'agent',
+      phone: '+1 (555) 234-5678',
+      bio: 'Dedicated CRM agent specializing in client onboarding and relationship building.',
+      company: 'CRM Platform',
+      title: 'Senior Agent',
+      location: 'Los Angeles, CA'
     });
 
     const agentUser2 = await User.create({
-      firstName: 'Mike',
-      lastName: 'Johnson',
-      email: 'mike@example.com',
+      firstName: 'Michael',
+      lastName: 'Chen',
+      email: 'agent2@example.com',
       password: 'password123',
-      role: 'agent'
+      role: 'agent',
+      phone: '+1 (555) 345-6789',
+      bio: 'Results-driven agent with expertise in lead generation and conversion.',
+      company: 'CRM Platform',
+      title: 'Lead Agent',
+      location: 'Chicago, IL'
     });
 
     const agentUser3 = await User.create({
-      firstName: 'Emma',
+      firstName: 'Emily',
       lastName: 'Davis',
-      email: 'emma@example.com',
+      email: 'agent3@example.com',
       password: 'password123',
-      role: 'agent'
+      role: 'agent',
+      phone: '+1 (555) 456-7890',
+      bio: 'Customer-focused agent with strong communication and problem-solving skills.',
+      company: 'CRM Platform',
+      title: 'Junior Agent',
+      location: 'Miami, FL'
     });
 
     // Create comprehensive test clients
@@ -319,11 +342,112 @@ const seedData = async () => {
       }
     ]);
 
+    // Create communication data
+    const communications = await Communication.create([
+      {
+        type: 'call',
+        client: clients[0]._id,
+        agent: agentUser1._id,
+        direction: 'outbound',
+        channel: 'voip',
+        phoneNumber: clients[0].phone,
+        status: 'completed',
+        duration: 300, // 5 minutes
+        notes: 'Successful initial call. Client interested in premium package.',
+        completedAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+        createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000)
+      },
+      {
+        type: 'message',
+        client: clients[1]._id,
+        agent: agentUser1._id,
+        direction: 'outbound',
+        channel: 'whatsapp',
+        content: 'Hi Emma! Thanks for your interest. I\'ve sent you our latest brochure. Let me know if you have any questions!',
+        status: 'completed',
+        completedAt: new Date(Date.now() - 1 * 60 * 60 * 1000), // 1 hour ago
+        createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000)
+      },
+      {
+        type: 'email',
+        client: clients[2]._id,
+        agent: agentUser2._id,
+        direction: 'outbound',
+        channel: 'email',
+        subject: 'Welcome to Our Platform - David Brown',
+        content: 'Dear David, Welcome to our platform! We\'re excited to have you on board. Here\'s your account information...',
+        email: clients[2].email,
+        status: 'completed',
+        completedAt: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
+        createdAt: new Date(Date.now() - 30 * 60 * 1000)
+      },
+      {
+        type: 'call',
+        client: clients[3]._id,
+        agent: agentUser2._id,
+        direction: 'outbound',
+        channel: 'phone',
+        phoneNumber: clients[3].phone,
+        status: 'in-progress',
+        duration: 120, // 2 minutes
+        createdAt: new Date(Date.now() - 10 * 60 * 1000) // 10 minutes ago
+      },
+      {
+        type: 'message',
+        client: clients[4]._id,
+        agent: agentUser3._id,
+        direction: 'outbound',
+        channel: 'telegram',
+        content: 'Hello Robert! I wanted to follow up on our previous discussion. Are you still interested in our services?',
+        status: 'completed',
+        completedAt: new Date(Date.now() - 45 * 60 * 1000), // 45 minutes ago
+        createdAt: new Date(Date.now() - 45 * 60 * 1000)
+      },
+      {
+        type: 'email',
+        client: clients[5]._id,
+        agent: agentUser3._id,
+        direction: 'outbound',
+        channel: 'email',
+        subject: 'Monthly Report - Jennifer White',
+        content: 'Hi Jennifer, Here\'s your monthly activity report. Your account shows excellent engagement...',
+        email: clients[5].email,
+        status: 'completed',
+        completedAt: new Date(Date.now() - 15 * 60 * 1000), // 15 minutes ago
+        createdAt: new Date(Date.now() - 15 * 60 * 1000)
+      },
+      {
+        type: 'call',
+        client: clients[6]._id,
+        agent: agentUser1._id,
+        direction: 'inbound',
+        channel: 'voip',
+        phoneNumber: clients[6].phone,
+        status: 'completed',
+        duration: 450, // 7.5 minutes
+        notes: 'Inbound call from James. Discussed pricing options.',
+        completedAt: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
+        createdAt: new Date(Date.now() - 5 * 60 * 1000)
+      },
+      {
+        type: 'message',
+        client: clients[7]._id,
+        agent: agentUser2._id,
+        direction: 'outbound',
+        channel: 'whatsapp',
+        content: 'Welcome Amanda! We\'re thrilled to have you join our platform. Here\'s a quick guide to get you started...',
+        status: 'completed',
+        completedAt: new Date(Date.now() - 20 * 60 * 1000), // 20 minutes ago
+        createdAt: new Date(Date.now() - 20 * 60 * 1000)
+      }
+    ]);
+
     console.log('✅ Comprehensive seed data created successfully!');
     console.log('\n📊 Data Summary:');
     console.log(`👥 Users: ${await User.countDocuments()} (1 Admin, 3 Agents)`);
     console.log(`👤 Clients: ${await Client.countDocuments()} (Various statuses)`);
     console.log(`📋 Tasks: ${await Task.countDocuments()} (Various priorities and statuses)`);
+    console.log(`📞 Communications: ${await Communication.countDocuments()} (Calls, Messages, Emails)`);
     console.log('\n🔑 Test Login Credentials:');
     console.log('Admin: admin@example.com / password123');
     console.log('Agent 1: agent@example.com / password123');

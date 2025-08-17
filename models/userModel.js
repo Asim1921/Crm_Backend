@@ -30,6 +30,31 @@ const userSchema = new mongoose.Schema({
     enum: ['admin', 'agent'],
     default: 'agent'
   },
+  profilePicture: {
+    type: String,
+    default: null
+  },
+  phone: {
+    type: String,
+    trim: true
+  },
+  bio: {
+    type: String,
+    trim: true,
+    maxlength: 500
+  },
+  company: {
+    type: String,
+    trim: true
+  },
+  title: {
+    type: String,
+    trim: true
+  },
+  location: {
+    type: String,
+    trim: true
+  },
   isActive: {
     type: Boolean,
     default: true

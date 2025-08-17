@@ -8,7 +8,8 @@ const {
   getAvailableAgents,
   assignClients,
   exportClients,
-  importClients
+  importClients,
+  deleteClient
 } = require('../controllers/clientController');
 const { protect, admin, agent } = require('../middleware/authMiddleware');
 
@@ -40,6 +41,7 @@ router.route('/')
 // Parameterized routes must come last
 router.route('/:id')
   .get(agent, getClientById)
-  .put(agent, updateClient);
+  .put(agent, updateClient)
+  .delete(agent, deleteClient);
 
 module.exports = router;
