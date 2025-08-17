@@ -117,14 +117,20 @@ const getCommunicationAnalytics = async (req, res) => {
 const getActiveAgents = async (req, res) => {
   try {
     const agents = await User.find({ role: 'agent' })
-      .select('firstName lastName email role title')
+      .select('firstName lastName email role title lastLogin')
       .limit(10);
 
-    const activeAgents = agents.map(agent => ({
-      ...agent.toObject(),
-      status: 'Online', // Simulate online status
-      initials: `${agent.firstName?.charAt(0) || ''}${agent.lastName?.charAt(0) || ''}`.toUpperCase()
-    }));
+    const now = new Date();
+    const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000); // 5 minutes ago
+
+    const activeAgents = agents.map(agent => {
+      const isOnline = agent.lastLogin && agent.lastLogin > fiveMinutesAgo;
+      return {
+        ...agent.toObject(),
+        status: isOnline ? 'Online' : 'Away',
+        initials: `${agent.firstName?.charAt(0) || ''}${agent.lastName?.charAt(0) || ''}`.toUpperCase()
+      };
+    });
 
     res.json(activeAgents);
   } catch (error) {
