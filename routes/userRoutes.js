@@ -4,7 +4,9 @@ const {
   updateProfile, 
   uploadProfilePicture, 
   getUserStats,
-  changePassword 
+  changePassword,
+  createUser,
+  getUsers
 } = require('../controllers/userController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -24,5 +26,10 @@ router.route('/stats')
 
 router.route('/change-password')
   .put(changePassword);
+
+// Admin only routes
+router.route('/')
+  .get(getUsers)
+  .post(createUser);
 
 module.exports = router;

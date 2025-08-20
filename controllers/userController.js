@@ -139,10 +139,84 @@ const changePassword = async (req, res) => {
   }
 };
 
+// @desc    Create new user (Admin only)
+// @route   POST /api/users
+// @access  Private (Admin only)
+const createUser = async (req, res) => {
+  try {
+    // Check if current user is admin
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. Admin privileges required.' });
+    }
+
+    const { firstName, lastName, email, password, role, title, phone } = req.body;
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: 'User already exists with this email' });
+    }
+
+    // Validate role - only allow agent or manager roles
+    if (role && !['agent', 'manager'].includes(role)) {
+      return res.status(400).json({ message: 'Invalid role. Only agent or manager roles are allowed.' });
+    }
+
+    // Create user
+    const user = await User.create({
+      firstName,
+      lastName,
+      email,
+      password,
+      role: role || 'agent',
+      title: title || 'Agent',
+      phone
+    });
+
+    res.status(201).json({
+      message: 'User created successfully',
+      user: {
+        _id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+        title: user.title,
+        phone: user.phone
+      }
+    });
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({ message: messages.join(', ') });
+    }
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Get all users (Admin only)
+// @route   GET /api/users
+// @access  Private (Admin only)
+const getUsers = async (req, res) => {
+  try {
+    // Check if current user is admin
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. Admin privileges required.' });
+    }
+
+    const users = await User.find({}).select('-password').sort({ createdAt: -1 });
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   getProfile,
   updateProfile,
   uploadProfilePicture,
   getUserStats,
-  changePassword
+  changePassword,
+  createUser,
+  getUsers
 };

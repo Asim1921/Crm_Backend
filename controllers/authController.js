@@ -47,46 +47,7 @@ const login = async (req, res) => {
   }
 };
 
-// @desc    Register user
-// @route   POST /api/auth/register
-// @access  Public
-const register = async (req, res) => {
-  try {
-    const { firstName, lastName, email, password, role } = req.body;
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: 'User already exists with this email' });
-    }
-
-    // Create user
-    const user = await User.create({
-      firstName,
-      lastName,
-      email,
-      password,
-      role: role || 'agent'
-    });
-
-    res.status(201).json({
-      message: 'User registered successfully',
-      user: {
-        _id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        role: user.role
-      }
-    });
-  } catch (error) {
-    if (error.name === 'ValidationError') {
-      const messages = Object.values(error.errors).map(err => err.message);
-      return res.status(400).json({ message: messages.join(', ') });
-    }
-    res.status(500).json({ message: 'Server error' });
-  }
-};
 
 // @desc    Get current user
 // @route   GET /api/auth/me
@@ -102,6 +63,5 @@ const getMe = async (req, res) => {
 
 module.exports = {
   login,
-  register,
   getMe
 };
