@@ -11,5 +11,9 @@ module.exports = {
     SMTP_PORT: process.env.SMTP_PORT || 587,
     SMTP_USER: process.env.SMTP_USER,
     SMTP_PASS: process.env.SMTP_PASS,
-    FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:5173'
+    FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:5173',
+    // Telegram Bot Configuration
+    TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
+    TELEGRAM_BOT_USERNAME: process.env.TELEGRAM_BOT_USERNAME,
+    COMPANY_NAME: process.env.COMPANY_NAME || 'CRM System'
   };
