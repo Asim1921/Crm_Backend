@@ -80,6 +80,17 @@ const getDashboardStats = async (req, res) => {
       }
     ]);
 
+    // Campaign overview
+    const campaignOverview = await Client.aggregate([
+      { $match: baseQuery },
+      {
+        $group: {
+          _id: '$campaign',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
     // Recent clients
     const recentClients = await Client.find(baseQuery)
       .populate('assignedAgent', 'firstName lastName')
@@ -95,6 +106,7 @@ const getDashboardStats = async (req, res) => {
           lastName: client.lastName,
           country: client.country,
           status: client.status,
+          campaign: client.campaign,
           assignedAgent: client.assignedAgent,
           createdAt: client.createdAt
         };
@@ -131,6 +143,7 @@ const getDashboardStats = async (req, res) => {
         changeValue: parseFloat(ftdChangePercent)
       },
       leadStatusOverview,
+      campaignOverview,
       recentClients: filteredRecentClients
     });
   } catch (error) {

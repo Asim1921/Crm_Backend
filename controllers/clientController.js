@@ -11,6 +11,7 @@ const getClients = async (req, res) => {
     const search = req.query.search || '';
     const status = req.query.status || '';
     const country = req.query.country || '';
+    const campaign = req.query.campaign || '';
 
     const skip = (page - 1) * limit;
 
@@ -27,6 +28,10 @@ const getClients = async (req, res) => {
     
     if (country) {
       query.country = { $regex: country, $options: 'i' };
+    }
+    
+    if (campaign) {
+      query.campaign = campaign;
     }
 
     // Role-based filtering
@@ -51,6 +56,7 @@ const getClients = async (req, res) => {
           lastName: client.lastName,
           country: client.country,
           status: client.status,
+          campaign: client.campaign,
           assignedAgent: client.assignedAgent,
           lastContact: client.lastContact,
           createdAt: client.createdAt
@@ -143,6 +149,7 @@ const getClientById = async (req, res) => {
         lastName: client.lastName,
         country: client.country,
         status: client.status,
+        campaign: client.campaign,
         assignedAgent: client.assignedAgent,
         notes: client.notes,
         lastContact: client.lastContact,

@@ -30,6 +30,11 @@ const userSchema = new mongoose.Schema({
     enum: ['admin', 'agent'],
     default: 'agent'
   },
+  campaign: {
+    type: String,
+    enum: ['Data', 'Affiliate'],
+    default: 'Data'
+  },
   profilePicture: {
     type: String,
     default: null

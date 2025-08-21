@@ -33,6 +33,11 @@ const clientSchema = new mongoose.Schema({
     enum: ['New Lead', 'Call Again', 'No Answer', 'Hang Up', 'Not Interested', 'FTD'],
     default: 'New Lead'
   },
+  campaign: {
+    type: String,
+    enum: ['Data', 'Affiliate'],
+    default: 'Data'
+  },
   assignedAgent: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'

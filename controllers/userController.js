@@ -17,7 +17,7 @@ const getProfile = async (req, res) => {
 // @access  Private
 const updateProfile = async (req, res) => {
   try {
-    const { firstName, lastName, email, phone, bio, company, title, location } = req.body;
+    const { firstName, lastName, email, phone, bio, company, title, location, campaign } = req.body;
 
     // Check if email is being changed and if it's already taken
     if (email && email !== req.user.email) {
@@ -27,18 +27,26 @@ const updateProfile = async (req, res) => {
       }
     }
 
+    // Build update object
+    const updateData = {
+      firstName,
+      lastName,
+      email,
+      phone,
+      bio,
+      company,
+      title,
+      location
+    };
+
+    // Only allow campaign update for admins
+    if (req.user.role === 'admin' && campaign) {
+      updateData.campaign = campaign;
+    }
+
     const updatedUser = await User.findByIdAndUpdate(
       req.user._id,
-      {
-        firstName,
-        lastName,
-        email,
-        phone,
-        bio,
-        company,
-        title,
-        location
-      },
+      updateData,
       { new: true, runValidators: true }
     ).select('-password');
 
