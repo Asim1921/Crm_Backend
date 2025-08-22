@@ -23,8 +23,8 @@ const getTasks = async (req, res) => {
       query.assignedTo = assignedTo;
     }
 
-    // Role-based filtering
-    if (req.user.role === 'agent') {
+    // Role-based filtering - but allow all tasks for a specific client
+    if (req.user.role === 'agent' && !req.query.clientId) {
       query.assignedTo = req.user._id;
     }
 
