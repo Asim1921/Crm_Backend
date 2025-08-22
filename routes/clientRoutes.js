@@ -9,7 +9,10 @@ const {
   assignClients,
   exportClients,
   importClients,
-  deleteClient
+  deleteClient,
+  searchClients,
+  addNote,
+  deleteNote
 } = require('../controllers/clientController');
 const { protect, admin, agent } = require('../middleware/authMiddleware');
 
@@ -33,6 +36,9 @@ router.route('/export')
 router.route('/import')
   .post(admin, importClients);
 
+router.route('/search')
+  .get(agent, searchClients);
+
 // General routes
 router.route('/')
   .get(agent, getClients)
@@ -43,5 +49,12 @@ router.route('/:id')
   .get(agent, getClientById)
   .put(agent, updateClient)
   .delete(agent, deleteClient);
+
+// Note routes
+router.route('/:id/notes')
+  .post(agent, addNote);
+
+router.route('/:id/notes/:noteId')
+  .delete(agent, deleteNote);
 
 module.exports = router;

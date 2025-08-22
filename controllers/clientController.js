@@ -54,6 +54,8 @@ const getClients = async (req, res) => {
           _id: client._id,
           firstName: client.firstName,
           lastName: client.lastName,
+          email: client.email,
+          phone: client.phone,
           country: client.country,
           status: client.status,
           campaign: client.campaign,
@@ -147,6 +149,8 @@ const getClientById = async (req, res) => {
         _id: client._id,
         firstName: client.firstName,
         lastName: client.lastName,
+        email: client.email,
+        phone: client.phone,
         country: client.country,
         status: client.status,
         campaign: client.campaign,
@@ -403,6 +407,148 @@ const importClients = async (req, res) => {
   }
 };
 
+// @desc    Search clients for header search
+// @route   GET /api/clients/search
+// @access  Private
+const searchClients = async (req, res) => {
+  try {
+    const { q } = req.query;
+    
+    if (!q || q.trim().length < 2) {
+      return res.json([]);
+    }
+
+    const searchQuery = q.trim();
+    
+    // Build search query
+    let query = {
+      $or: [
+        { firstName: { $regex: searchQuery, $options: 'i' } },
+        { lastName: { $regex: searchQuery, $options: 'i' } },
+        { email: { $regex: searchQuery, $options: 'i' } },
+        { phone: { $regex: searchQuery, $options: 'i' } },
+        { country: { $regex: searchQuery, $options: 'i' } }
+      ]
+    };
+
+    // Role-based filtering
+    if (req.user.role === 'agent') {
+      query.assignedAgent = req.user._id;
+    }
+
+    const clients = await Client.find(query)
+      .populate('assignedAgent', 'firstName lastName')
+      .limit(10)
+      .sort({ createdAt: -1 })
+      .select('firstName lastName email phone country status campaign assignedAgent');
+
+    // Filter sensitive data for agents
+    const filteredClients = clients.map(client => {
+      if (req.user.role === 'agent') {
+        return {
+          _id: client._id,
+          firstName: client.firstName,
+          lastName: client.lastName,
+          email: client.email,
+          phone: client.phone,
+          country: client.country,
+          status: client.status,
+          campaign: client.campaign,
+          assignedAgent: client.assignedAgent
+        };
+      }
+      return client;
+    });
+
+    res.json(filteredClients);
+  } catch (error) {
+    console.error('Search error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Add note to client
+// @route   POST /api/clients/:id/notes
+// @access  Private
+const addNote = async (req, res) => {
+  try {
+    const { content } = req.body;
+    
+    if (!content || !content.trim()) {
+      return res.status(400).json({ message: 'Note content is required' });
+    }
+
+    const client = await Client.findById(req.params.id);
+    
+    if (!client) {
+      return res.status(404).json({ message: 'Client not found' });
+    }
+
+    // Check permissions
+    if (req.user.role === 'agent' && client.assignedAgent.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    const note = {
+      content: content.trim(),
+      createdBy: req.user._id,
+      createdAt: new Date()
+    };
+
+    client.notes = client.notes || [];
+    client.notes.push(note);
+    
+    await client.save();
+    
+    // Populate the createdBy field for the new note
+    await client.populate('notes.createdBy', 'firstName lastName');
+    
+    res.status(201).json(client);
+  } catch (error) {
+    console.error('Add note error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Delete note from client
+// @route   DELETE /api/clients/:id/notes/:noteId
+// @access  Private
+const deleteNote = async (req, res) => {
+  try {
+    const { noteId } = req.params;
+    
+    const client = await Client.findById(req.params.id);
+    
+    if (!client) {
+      return res.status(404).json({ message: 'Client not found' });
+    }
+
+    // Check permissions
+    if (req.user.role === 'agent' && client.assignedAgent.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    const noteIndex = client.notes.findIndex(note => note._id.toString() === noteId);
+    
+    if (noteIndex === -1) {
+      return res.status(404).json({ message: 'Note not found' });
+    }
+
+    // Only allow deletion by the note creator or admin
+    if (req.user.role !== 'admin' && client.notes[noteIndex].createdBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized to delete this note' });
+    }
+
+    client.notes.splice(noteIndex, 1);
+    await client.save();
+    
+    res.json({ message: 'Note deleted successfully' });
+  } catch (error) {
+    console.error('Delete note error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   getClients,
   createClient,
@@ -413,5 +559,8 @@ module.exports = {
   assignClients,
   exportClients,
   importClients,
-  deleteClient
+  deleteClient,
+  searchClients,
+  addNote,
+  deleteNote
 };

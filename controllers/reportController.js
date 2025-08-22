@@ -104,6 +104,8 @@ const getDashboardStats = async (req, res) => {
           _id: client._id,
           firstName: client.firstName,
           lastName: client.lastName,
+          email: client.email,
+          phone: client.phone,
           country: client.country,
           status: client.status,
           campaign: client.campaign,
