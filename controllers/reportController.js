@@ -102,10 +102,9 @@ const getDashboardStats = async (req, res) => {
       if (req.user.role === 'agent') {
         return {
           _id: client._id,
+          clientId: client.clientId,
           firstName: client.firstName,
           lastName: client.lastName,
-          email: client.email,
-          phone: client.phone,
           country: client.country,
           status: client.status,
           campaign: client.campaign,

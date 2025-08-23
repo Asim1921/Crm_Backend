@@ -52,10 +52,9 @@ const getClients = async (req, res) => {
       if (req.user.role === 'agent') {
         return {
           _id: client._id,
+          clientId: client.clientId,
           firstName: client.firstName,
           lastName: client.lastName,
-          email: client.email,
-          phone: client.phone,
           country: client.country,
           status: client.status,
           campaign: client.campaign,
@@ -147,10 +146,9 @@ const getClientById = async (req, res) => {
     if (req.user.role === 'agent') {
       const filteredClient = {
         _id: client._id,
+        clientId: client.clientId,
         firstName: client.firstName,
         lastName: client.lastName,
-        email: client.email,
-        phone: client.phone,
         country: client.country,
         status: client.status,
         campaign: client.campaign,
@@ -423,6 +421,7 @@ const searchClients = async (req, res) => {
     // Build search query
     let query = {
       $or: [
+        { clientId: { $regex: searchQuery, $options: 'i' } },
         { firstName: { $regex: searchQuery, $options: 'i' } },
         { lastName: { $regex: searchQuery, $options: 'i' } },
         { email: { $regex: searchQuery, $options: 'i' } },
@@ -440,17 +439,16 @@ const searchClients = async (req, res) => {
       .populate('assignedAgent', 'firstName lastName')
       .limit(10)
       .sort({ createdAt: -1 })
-      .select('firstName lastName email phone country status campaign assignedAgent');
+      .select('clientId firstName lastName email phone country status campaign assignedAgent');
 
     // Filter sensitive data for agents
     const filteredClients = clients.map(client => {
       if (req.user.role === 'agent') {
         return {
           _id: client._id,
+          clientId: client.clientId,
           firstName: client.firstName,
           lastName: client.lastName,
-          email: client.email,
-          phone: client.phone,
           country: client.country,
           status: client.status,
           campaign: client.campaign,

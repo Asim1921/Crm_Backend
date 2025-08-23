@@ -6,7 +6,9 @@ const {
   getUserStats,
   changePassword,
   createUser,
-  getUsers
+  getUsers,
+  updateUser,
+  deleteUser
 } = require('../controllers/userController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -31,5 +33,9 @@ router.route('/change-password')
 router.route('/')
   .get(getUsers)
   .post(createUser);
+
+router.route('/:id')
+  .put(updateUser)
+  .delete(deleteUser);
 
 module.exports = router;

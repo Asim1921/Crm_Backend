@@ -2,6 +2,15 @@
 const mongoose = require('mongoose');
 
 const clientSchema = new mongoose.Schema({
+  clientId: {
+    type: String,
+    unique: true,
+    required: true,
+    default: function() {
+      // Generate a random 6-digit number
+      return Math.floor(100000 + Math.random() * 900000).toString();
+    }
+  },
   firstName: {
     type: String,
     required: [true, 'First name is required'],
@@ -75,6 +84,7 @@ const clientSchema = new mongoose.Schema({
 
 // Index for search functionality
 clientSchema.index({ 
+  clientId: 'text',
   firstName: 'text', 
   lastName: 'text', 
   email: 'text', 
