@@ -35,6 +35,7 @@ app.use('/api/tasks', require('./routes/taskRoutes'));
 app.use('/api/reports', require('./routes/reportRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/communications', require('./routes/communicationRoutes'));
+app.use('/api/twilio', require('./routes/twilioRoutes'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

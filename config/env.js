@@ -12,6 +12,11 @@ module.exports = {
     SMTP_USER: process.env.SMTP_USER,
     SMTP_PASS: process.env.SMTP_PASS,
     FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:5173',
+    // Twilio Configuration
+    TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID || 'AC2e749f3b25fc86afa0dd6937206d95ec',
+    TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN || '8045c869d4d253215e05ceeacea69e0b',
+    TWILIO_PHONE_NUMBER: process.env.TWILIO_PHONE_NUMBER || '+14433206038',
+    BACKEND_URL: process.env.BACKEND_URL || 'http://localhost:5000',
     // Telegram Bot Configuration
     TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
     TELEGRAM_BOT_USERNAME: process.env.TELEGRAM_BOT_USERNAME,
