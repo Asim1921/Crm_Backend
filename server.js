@@ -1,13 +1,15 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
 const connectDB = require('./config/db');
 const { checkDBConnection } = require('./middleware/dbHealthMiddleware');
 require('dotenv').config();
 
 const app = express();
+
+// Trust proxy for rate limiting behind load balancer/proxy
+app.set('trust proxy', 1);
 
 // Connect to MongoDB
 connectDB();
