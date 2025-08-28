@@ -2,7 +2,9 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const mongoose = require('mongoose');
 const connectDB = require('./config/db');
+const { checkDBConnection } = require('./middleware/dbHealthMiddleware');
 require('dotenv').config();
 
 const app = express();
@@ -17,16 +19,38 @@ app.use(cors({
   credentials: true
 }));
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
-});
-app.use(limiter);
+// Rate limiting disabled for development - remove in production if needed
+// const limiter = rateLimit({
+//   windowMs: 15 * 60 * 1000, // 15 minutes
+//   max: 1000, // limit each IP to 1000 requests per windowMs
+//   message: {
+//     error: 'Too many requests from this IP, please try again later.',
+//     retryAfter: Math.ceil(15 * 60 / 60)
+//   },
+//   standardHeaders: true,
+//   legacyHeaders: false,
+//   handler: (req, res) => {
+//     res.status(429).json({
+//       error: 'Too many requests from this IP, please try again later.',
+//       retryAfter: Math.ceil(15 * 60 / 60)
+//     });
+//   }
+// });
+
+// Rate limiting disabled - apply only if needed in production
+// app.use((req, res, next) => {
+//   if (req.path === '/api/health') {
+//     return next();
+//   }
+//   limiter(req, res, next);
+// });
 
 // Body parser middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Database health check middleware for all API routes
+app.use('/api', checkDBConnection);
 
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));
@@ -39,11 +63,17 @@ app.use('/api/twilio', require('./routes/twilioRoutes'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
+  const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+  
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    database: {
+      status: dbStatus,
+      readyState: mongoose.connection.readyState
+    }
   });
 });
 

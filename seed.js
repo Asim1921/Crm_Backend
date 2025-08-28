@@ -253,6 +253,40 @@ const seedData = async () => {
         }],
         lastContact: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000),
         tags: ['ftd', 'persistent']
+      },
+      {
+        firstName: 'Sarah',
+        lastName: 'Anderson',
+        email: 'sa.anderson@email.com',
+        phone: '+1 555 0133',
+        country: 'United States',
+        status: 'FTD RETENTION',
+        assignedAgent: agentUser2._id,
+        value: 15000,
+        notes: [{
+          content: 'Client made additional deposits after initial FTD. Excellent retention.',
+          createdBy: agentUser2._id,
+          createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
+        }],
+        lastContact: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+        tags: ['ftd-retention', 'high-value']
+      },
+      {
+        firstName: 'Thomas',
+        lastName: 'Wilson',
+        email: 'tw.wilson@email.com',
+        phone: '+1 555 0134',
+        country: 'Canada',
+        status: 'No Answer',
+        assignedAgent: agentUser3._id,
+        value: 2000,
+        notes: [{
+          content: 'Multiple attempts to contact, no response received.',
+          createdBy: agentUser3._id,
+          createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)
+        }],
+        lastContact: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+        tags: ['no-response', 'unreachable']
       }
     ]);
 

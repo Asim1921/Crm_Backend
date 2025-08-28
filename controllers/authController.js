@@ -9,7 +9,14 @@ const config = require('../config/env');
 // Generate JWT Token
 const generateToken = (id) => {
   return jwt.sign({ id }, config.JWT_SECRET, {
-    expiresIn: config.JWT_EXPIRE
+    expiresIn: config.JWT_EXPIRE || '30d' // Extended to 30 days
+  });
+};
+
+// Generate Refresh Token
+const generateRefreshToken = (id) => {
+  return jwt.sign({ id }, config.JWT_SECRET, {
+    expiresIn: '90d' // Extended to 90 days
   });
 };
 
@@ -36,13 +43,18 @@ const login = async (req, res) => {
     user.lastLogin = new Date();
     await user.save();
 
+    const token = generateToken(user._id);
+    const refreshToken = generateRefreshToken(user._id);
+
     res.json({
       _id: user._id,
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
       role: user.role,
-      token: generateToken(user._id)
+      token,
+      refreshToken,
+      expiresIn: config.JWT_EXPIRE || '7d'
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
@@ -56,14 +68,78 @@ const login = async (req, res) => {
 // @access  Private
 const getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user.id).select('-password');
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
     res.json(user);
   } catch (error) {
+    console.error('GetMe error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Refresh token
+// @route   POST /api/auth/refresh
+// @access  Public
+const refreshToken = async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return res.status(400).json({ message: 'Refresh token is required' });
+    }
+
+    const decoded = jwt.verify(refreshToken, config.JWT_SECRET);
+    const user = await User.findById(decoded.id).select('-password');
+
+    if (!user) {
+      return res.status(401).json({ message: 'User not found' });
+    }
+
+    const newToken = generateToken(user._id);
+    const newRefreshToken = generateRefreshToken(user._id);
+
+    res.json({
+      token: newToken,
+      refreshToken: newRefreshToken,
+      expiresIn: config.JWT_EXPIRE || '7d'
+    });
+  } catch (error) {
+    console.error('Refresh token error:', error);
+    
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ message: 'Refresh token expired' });
+    } else if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ message: 'Invalid refresh token' });
+    }
+    
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Logout user
+// @route   POST /api/auth/logout
+// @access  Private
+const logout = async (req, res) => {
+  try {
+    // Update last logout time
+    await User.findByIdAndUpdate(req.user.id, {
+      lastLogout: new Date()
+    });
+
+    res.json({ message: 'Logged out successfully' });
+  } catch (error) {
+    console.error('Logout error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
 
 module.exports = {
   login,
-  getMe
+  getMe,
+  refreshToken,
+  logout
 };

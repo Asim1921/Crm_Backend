@@ -97,7 +97,8 @@ const getDashboardStats = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(5);
 
-    // Filter sensitive data for agents
+    // Keep all data including phone numbers for agents (they need them for calls)
+    // Phone numbers will be hidden in the frontend UI instead
     const filteredRecentClients = recentClients.map(client => {
       if (req.user.role === 'agent') {
         return {
@@ -105,6 +106,8 @@ const getDashboardStats = async (req, res) => {
           clientId: client.clientId,
           firstName: client.firstName,
           lastName: client.lastName,
+          email: client.email, // Keep email for agents
+          phone: client.phone, // Keep phone for agents to make calls
           country: client.country,
           status: client.status,
           campaign: client.campaign,

@@ -47,7 +47,8 @@ const getClients = async (req, res) => {
 
     const total = await Client.countDocuments(query);
 
-    // Filter sensitive data for agents
+    // Keep all data including phone numbers for agents (they need them for calls)
+    // Phone numbers will be hidden in the frontend UI instead
     const filteredClients = clients.map(client => {
       if (req.user.role === 'agent') {
         return {
@@ -55,6 +56,8 @@ const getClients = async (req, res) => {
           clientId: client.clientId,
           firstName: client.firstName,
           lastName: client.lastName,
+          email: client.email, // Keep email for agents
+          phone: client.phone, // Keep phone for agents to make calls
           country: client.country,
           status: client.status,
           campaign: client.campaign,
@@ -113,7 +116,11 @@ const updateClient = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized' });
     }
 
-    client = await Client.findByIdAndUpdate(req.params.id, req.body, {
+    // Remove clientId from update data to prevent it from being changed
+    const updateData = { ...req.body };
+    delete updateData.clientId;
+    
+    client = await Client.findByIdAndUpdate(req.params.id, updateData, {
       new: true,
       runValidators: true
     }).populate('assignedAgent', 'firstName lastName');
@@ -142,13 +149,16 @@ const getClientById = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized' });
     }
 
-    // Filter sensitive data for agents
+    // Keep all data including phone numbers for agents (they need them for calls)
+    // Phone numbers will be hidden in the frontend UI instead
     if (req.user.role === 'agent') {
       const filteredClient = {
         _id: client._id,
         clientId: client.clientId,
         firstName: client.firstName,
         lastName: client.lastName,
+        email: client.email, // Keep email for agents
+        phone: client.phone, // Keep phone for agents to make calls
         country: client.country,
         status: client.status,
         campaign: client.campaign,
@@ -441,7 +451,8 @@ const searchClients = async (req, res) => {
       .sort({ createdAt: -1 })
       .select('clientId firstName lastName email phone country status campaign assignedAgent');
 
-    // Filter sensitive data for agents
+    // Keep all data including phone numbers for agents (they need them for calls)
+    // Phone numbers will be hidden in the frontend UI instead
     const filteredClients = clients.map(client => {
       if (req.user.role === 'agent') {
         return {
@@ -449,6 +460,8 @@ const searchClients = async (req, res) => {
           clientId: client.clientId,
           firstName: client.firstName,
           lastName: client.lastName,
+          email: client.email, // Keep email for agents
+          phone: client.phone, // Keep phone for agents to make calls
           country: client.country,
           status: client.status,
           campaign: client.campaign,

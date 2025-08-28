@@ -21,18 +21,12 @@ app.post('/twiml/voice', (request, response) => {
   // Get the 'To' number from the request
   const toNumber = request.body.To;
 
-  // Say a brief welcome message
-  twiml.say('Hello! This is a call from your CRM system. Connecting you now.');
-  
-  // Add a pause
-  twiml.pause({ length: 1 });
-
-  // Connect the call to enable real-time conversation
+  // Connect the call directly for real-time conversation (no recorded message)
   const dial = twiml.dial({
     callerId: request.body.From,
     timeout: 30,
     record: 'record-from-answer',
-    recordingStatusCallback: 'https://c03b148fdcfb.ngrok-free.app/api/recording-status'
+    recordingStatusCallback: 'https://2a152400c10e.ngrok-free.app/api/recording-status'
   });
 
   // Connect to the called number
@@ -56,7 +50,7 @@ app.get('/twiml/voice', (request, response) => {
   response.send(twiml.toString());
 });
 
-// Connect action endpoint
+// Connect action endpoint - Direct connection only
 app.post('/twiml/connect-action', (request, response) => {
   console.log('Connect action received:', request.body);
 
@@ -67,16 +61,13 @@ app.post('/twiml/connect-action', (request, response) => {
   const dialCallStatus = request.body.DialCallStatus;
 
   if (dialCallStatus === 'answered') {
-    // Call was answered - allow conversation to continue
-    twiml.say('You are now connected. You can start your conversation.');
+    // Call was answered - allow conversation to continue immediately
+    // NO recorded messages - just let the conversation flow naturally
     twiml.pause({ length: 300 }); // 5-minute conversation time
-    twiml.say('Thank you for using our CRM system. Goodbye!');
   } else {
-    // Call was not answered
-    twiml.say('The call was not answered. Thank you for using our CRM system.');
+    // Call was not answered - just hang up
+    twiml.hangup();
   }
-
-  twiml.hangup();
 
   // Send the TwiML response
   response.type('text/xml');
@@ -125,35 +116,72 @@ app.get('/health', (request, response) => {
   response.json({ status: 'OK', message: 'Twilio webhook server is running' });
 });
 
-// Generate Twilio Client token
+// Generate Twilio Client token for browser-based calling
 app.post('/api/token', (request, response) => {
   try {
+    console.log('Token request received:', request.body);
+    
     const accountSid = 'AC2e749f3b25fc86afa0dd6937206d95ec';
     const authToken = 'fd74dacc077f671da704bf0570b50041';
+    const apiKeySid = 'SK8f332404eee9c47bf39777429b450eee';
+    const apiKeySecret = 'fd74dacc077f671da704bf0570b50041';
+
+    // Get identity from request body or use default
+    const identity = request.body?.identity || 'crm-agent';
 
     // Create an access token with identity
     const token = new twilio.jwt.AccessToken(
       accountSid,
-      'SK8f332404eee9c47bf39777429b450eee', // Your API Key SID
-      'fd74dacc077f671da704bf0570b50041',   // Your API Key Secret
-      { identity: 'crm-user' }  // Add identity in options
+      apiKeySid,
+      apiKeySecret,
+      { identity: identity }
     );
 
-    // Add Voice grant for outgoing calls
+    // Add Voice grant for browser-based calling
     const voiceGrant = new twilio.jwt.AccessToken.VoiceGrant({
-      outgoingApplicationSid: 'AP1234567890abcdef', // You'll need to create a TwiML App in Twilio Console
+      outgoingApplicationSid: 'AP32523e109f0ac488a4b54407092b7ab3', // TwiML App SID for browser calls
       incomingAllow: true
     });
 
     token.addGrant(voiceGrant);
 
-    response.json({
-      token: token.toJwt()
-    });
+    const tokenResponse = {
+      token: token.toJwt(),
+      accountSid: accountSid
+    };
+
+    console.log('Token generated successfully for identity:', identity);
+    response.json(tokenResponse);
   } catch (error) {
     console.error('Error generating token:', error);
     response.status(500).json({ error: 'Failed to generate token' });
   }
+});
+
+// TwiML endpoint for browser-based calls
+app.post('/twiml/browser-call', (request, response) => {
+  console.log('Browser call TwiML request:', request.body);
+
+  const twiml = new VoiceResponse();
+  const toNumber = request.body.To;
+  const fromNumber = request.body.From;
+
+  console.log(`Connecting browser call from ${fromNumber} to ${toNumber}`);
+
+  // Direct connection - NO recorded messages, NO delays, just immediate two-way communication
+  const dial = twiml.dial({
+    callerId: fromNumber,
+    timeout: 30,
+    record: 'record-from-answer',
+    recordingStatusCallback: 'https://2a152400c10e.ngrok-free.app/api/recording-status'
+  });
+
+  // Direct dial - immediate connection for real-time conversation
+  dial.number(toNumber);
+
+  // Send the TwiML response
+  response.type('text/xml');
+  response.send(twiml.toString());
 });
 
 // Start the server

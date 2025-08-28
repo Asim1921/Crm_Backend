@@ -105,15 +105,14 @@ const makeCall = async (req, res) => {
     console.log('To:', validatedNumber);
     console.log('From:', phoneNumber);
     
-    // Call the target number directly
+    // Call the target number directly using webhook for browser-based calling
     const call = await client.calls.create({
       to: validatedNumber,
       from: phoneNumber,
-      twiml: `<Response>
-        <Say voice="alice" language="en-US">Hello! This is a call from your CRM system.</Say>
-        <Pause length="2"/>
-        <Say voice="alice" language="en-US">Thank you for using our CRM system. Goodbye!</Say>
-      </Response>`
+      url: 'https://2a152400c10e.ngrok-free.app/twiml/browser-call',
+      statusCallback: 'https://2a152400c10e.ngrok-free.app/api/call-status',
+      statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
+      statusCallbackMethod: 'POST'
     });
     
     console.log('Twilio call created successfully:', call.sid);
@@ -276,14 +275,7 @@ const generateTwiML = async (req, res) => {
 
     console.log(`Generating TwiML for call from ${fromNumber} to ${toNumber}`);
 
-    // Say a brief welcome message
-    twiml.say({
-      voice: 'alice',
-      language: 'en-US'
-    }, 'Hello! This is a call from your CRM system. Connecting you now.');
-    
-    // Add a pause
-    twiml.pause({ length: 1 });
+    // Direct connection - no recorded messages for immediate conversation
 
     // Connect the call (simplified for localhost)
     const dial = twiml.dial({
@@ -387,21 +379,10 @@ const handleConnectAction = async (req, res) => {
 
     if (dialCallStatus === 'answered') {
       // Call was answered - allow conversation to continue
-      twiml.say({
-        voice: 'alice',
-        language: 'en-US'
-      }, 'You are now connected. You can start your conversation.');
+      // Call was answered - allow conversation to continue immediately
       twiml.pause({ length: 300 }); // 5-minute conversation time
-      twiml.say({
-        voice: 'alice',
-        language: 'en-US'
-      }, 'Thank you for using our CRM system. Goodbye!');
     } else {
-      // Call was not answered
-      twiml.say({
-        voice: 'alice',
-        language: 'en-US'
-      }, 'The call was not answered. Thank you for using our CRM system.');
+      // Call was not answered - just hang up
     }
 
     twiml.hangup();
@@ -436,6 +417,45 @@ const getAccountInfo = async (req, res) => {
     res.status(500).json({ 
       success: false,
       message: 'Failed to get account info',
+      error: error.message 
+    });
+  }
+};
+
+// @desc    Generate Twilio Client token for browser-based calling
+// @route   POST /api/twilio/token
+// @access  Private
+const generateToken = async (req, res) => {
+  try {
+    const { identity } = req.body;
+
+    // Create an access token
+    const token = new twilio.jwt.AccessToken(
+      accountSid,
+      'SK8f332404eee9c47bf39777429b450eee', // API Key SID
+      'fd74dacc077f671da704bf0570b50041',   // API Key Secret
+      { identity: identity || 'crm-agent' }
+    );
+
+    // Add Voice grant
+    const voiceGrant = new twilio.jwt.AccessToken.VoiceGrant({
+      outgoingApplicationSid: 'AP32523e109f0ac488a4b54407092b7ab3', // Your TwiML App SID
+      incomingAllow: true
+    });
+
+    token.addGrant(voiceGrant);
+
+    res.json({
+      success: true,
+      token: token.toJwt(),
+      accountSid: accountSid
+    });
+
+  } catch (error) {
+    console.error('Error generating token:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to generate token',
       error: error.message 
     });
   }
@@ -477,5 +497,6 @@ module.exports = {
   handleStatusCallback,
   handleRecordingCallback,
   handleConnectAction,
-  getAccountInfo
+  getAccountInfo,
+  generateToken
 };

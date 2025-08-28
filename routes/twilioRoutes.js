@@ -8,7 +8,8 @@ const {
   handleStatusCallback,
   handleRecordingCallback,
   handleConnectAction,
-  getAccountInfo
+  getAccountInfo,
+  generateToken
 } = require('../controllers/twilioController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -20,6 +21,7 @@ router.use('/end-call', protect);
 router.use('/call-status', protect);
 router.use('/recent-calls', protect);
 router.use('/account-info', protect);
+router.use('/token', protect);
 
 // Call management routes
 router.post('/call', makeCall);
@@ -27,6 +29,7 @@ router.post('/end-call', endCall);
 router.get('/call-status/:callSid', getCallStatus);
 router.get('/recent-calls', getRecentCalls);
 router.get('/account-info', getAccountInfo);
+router.post('/token', generateToken);
 
 // Public routes (Twilio webhooks - no authentication required)
 router.post('/twiml/voice', generateTwiML);
