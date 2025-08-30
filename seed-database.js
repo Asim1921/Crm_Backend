@@ -68,13 +68,21 @@ const countries = [
   'Cambodia', 'Laos', 'Mongolia', 'Kazakhstan', 'Uzbekistan', 'Kyrgyzstan', 'Tajikistan', 'Turkmenistan', 'Azerbaijan', 'Georgia',
   'Armenia', 'Turkey', 'Iran', 'Iraq', 'Syria', 'Lebanon', 'Jordan', 'Israel', 'Palestine', 'Saudi Arabia',
   'Yemen', 'Oman', 'UAE', 'Qatar', 'Kuwait', 'Bahrain', 'Egypt', 'Libya', 'Tunisia', 'Algeria',
-  'Morocco', 'Sudan', 'South Sudan', 'Ethiopia', 'Somalia', 'Kenya', 'Uganda', 'Tanzania', 'Rwanda', 'Burundi',
-  'DR Congo', 'Congo', 'Gabon', 'Cameroon', 'Nigeria', 'Niger', 'Chad', 'Central African Republic', 'South Africa', 'Namibia',
-  'Botswana', 'Zimbabwe', 'Zambia', 'Malawi', 'Mozambique', 'Madagascar', 'Mauritius', 'Seychelles', 'Comoros', 'Mayotte'
+  'Morocco', 'Sudan', 'South Sudan', 'Ethiopia', 'Somalia', 'Kenya', 'Uganda', 'Tanzania', 'Rwanda',
+  'Burundi', 'DR Congo', 'Congo', 'Gabon', 'Cameroon', 'Nigeria', 'Niger', 'Chad', 'Central African Republic',
+  'South Africa', 'Namibia', 'Botswana', 'Zimbabwe', 'Zambia', 'Malawi', 'Mozambique', 'Madagascar', 'Mauritius',
+  'Seychelles', 'Comoros', 'Mayotte'
 ];
 
 const statuses = [
-  'New Lead', 'FTD', 'FTD RETENTION', 'Call Again', 'No Answer', 'NA5UP', 'Not Interested', 'Hang Up'
+  'New Lead',
+  'FTD',
+  'FTD RETENTION',
+  'Call Again',
+  'No Answer',
+  'NA5UP',
+  'Not Interested',
+  'Hang Up'
 ];
 
 const campaigns = ['Data', 'Affiliate'];
@@ -134,7 +142,7 @@ const createAgentUsers = async () => {
     ];
 
     const agents = [];
-    
+
     for (let i = 0; i < agentEmails.length; i++) {
       const existingAgent = await User.findOne({ email: agentEmails[i] });
       if (existingAgent) {
@@ -165,13 +173,12 @@ const createAgentUsers = async () => {
 const createDummyClients = async (agents) => {
   try {
     console.log('🔄 Creating 100 dummy clients...');
-    
     const clients = [];
     const batchSize = 10; // Process in batches to avoid memory issues
-    
+
     for (let i = 0; i < 100; i += batchSize) {
       const batch = [];
-      
+
       for (let j = 0; j < batchSize && (i + j) < 100; j++) {
         const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
         const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
@@ -181,10 +188,10 @@ const createDummyClients = async (agents) => {
         const status = statuses[Math.floor(Math.random() * statuses.length)];
         const campaign = campaigns[Math.floor(Math.random() * campaigns.length)];
         const assignedAgent = agents[Math.floor(Math.random() * agents.length)]._id;
-        
+
         // Generate unique client ID
         const clientId = await generateUniqueClientId();
-        
+
         const clientData = {
           clientId,
           firstName,
@@ -205,17 +212,16 @@ const createDummyClients = async (agents) => {
             }
           ]
         };
-        
+
         batch.push(clientData);
       }
-      
+
       // Create batch of clients
       const createdClients = await Client.insertMany(batch);
       clients.push(...createdClients);
-      
       console.log(`✅ Created clients ${i + 1} to ${Math.min(i + batchSize, 100)}`);
     }
-    
+
     console.log(`✅ Successfully created ${clients.length} dummy clients`);
     return clients;
   } catch (error) {
@@ -236,7 +242,6 @@ const clearExistingData = async () => {
     // Clear all users except admin
     await User.deleteMany({ email: { $ne: 'AdminCrm@gmail.com' } });
     console.log('✅ Cleared existing users (except admin)');
-    
   } catch (error) {
     console.error('❌ Error clearing existing data:', error.message);
     throw error;
@@ -247,37 +252,37 @@ const clearExistingData = async () => {
 const seedDatabase = async () => {
   try {
     await connectDB();
-    
     console.log('\n🚀 Starting database seeding...\n');
-    
+
     // Clear existing data
     await clearExistingData();
-    
+
     // Create admin user
     const admin = await createAdminUser();
-    
+
     // Create agent users
     const agents = await createAgentUsers();
-    
+
     // Create dummy clients
     const clients = await createDummyClients(agents);
-    
+
     console.log('\n🎉 Database seeding completed successfully!');
     console.log('\n📊 Summary:');
-    console.log(`   👤 Admin users: 1`);
-    console.log(`   👥 Agent users: ${agents.length}`);
-    console.log(`   👨‍💼 Clients: ${clients.length}`);
+    console.log(`👤 Admin users: 1`);
+    console.log(`👥 Agent users: ${agents.length}`);
+    console.log(`👨‍💼 Clients: ${clients.length}`);
+
     console.log('\n🔑 Admin Login:');
-    console.log(`   📧 Email: AdminCrm@gmail.com`);
-    console.log(`   🔒 Password: Admin123`);
+    console.log(`📧 Email: AdminCrm@gmail.com`);
+    console.log(`🔒 Password: Admin123`);
+
     console.log('\n🔑 Agent Logins:');
     agents.forEach((agent, index) => {
-      console.log(`   📧 Email: agent${index + 1}@crm.com`);
-      console.log(`   🔒 Password: Agent123`);
+      console.log(`📧 Email: agent${index + 1}@crm.com`);
+      console.log(`🔒 Password: Agent123`);
     });
-    
+
     console.log('\n✅ All clients have phone numbers and can be called by agents!');
-    
     process.exit(0);
   } catch (error) {
     console.error('\n❌ Seeding failed:', error.message);

@@ -24,8 +24,9 @@ const clientSchema = new mongoose.Schema({
   },
   lastName: {
     type: String,
-    required: [true, 'Last name is required'],
-    trim: true
+    required: false,
+    trim: true,
+    default: ''
   },
   email: {
     type: String,

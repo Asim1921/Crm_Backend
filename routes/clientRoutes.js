@@ -10,6 +10,7 @@ const {
   exportClients,
   importClients,
   deleteClient,
+  deleteClients,
   searchClients,
   addNote,
   deleteNote
@@ -29,6 +30,9 @@ router.route('/agents')
 
 router.route('/assign')
   .put(admin, assignClients);
+
+router.route('/bulk-delete')
+  .delete(admin, deleteClients);
 
 router.route('/export')
   .get(agent, exportClients);
