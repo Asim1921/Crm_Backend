@@ -88,8 +88,16 @@ const getClients = async (req, res) => {
 // @access  Private
 const createClient = async (req, res) => {
   try {
+    // Handle the case where firstName contains the full name
+    const clientData = { ...req.body };
+    
+    // If lastName is not provided, set it to empty string
+    if (!clientData.lastName) {
+      clientData.lastName = '';
+    }
+
     const client = await Client.create({
-      ...req.body,
+      ...clientData,
       assignedAgent: req.body.assignedAgent || req.user._id
     });
 
@@ -375,8 +383,8 @@ const importClients = async (req, res) => {
       
       try {
         // Validate required fields
-        if (!clientData.firstName || !clientData.lastName || !clientData.email) {
-          errors.push(`Row ${i + 1}: Missing required fields (firstName, lastName, email)`);
+        if (!clientData.firstName || !clientData.email) {
+          errors.push(`Row ${i + 1}: Missing required fields (firstName, email)`);
           continue;
         }
 
@@ -390,7 +398,7 @@ const importClients = async (req, res) => {
         // Create client
         const client = await Client.create({
           firstName: clientData.firstName,
-          lastName: clientData.lastName,
+          lastName: clientData.lastName || '',
           email: clientData.email,
           phone: clientData.phone || '',
           country: clientData.country || 'Unknown',
@@ -560,6 +568,51 @@ const deleteNote = async (req, res) => {
   }
 };
 
+// @desc    Delete multiple clients
+// @route   DELETE /api/clients/bulk-delete
+// @access  Private (Admin only)
+const deleteClients = async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. Admin only.' });
+    }
+
+    const { clientIds } = req.body;
+
+    if (!clientIds || !Array.isArray(clientIds) || clientIds.length === 0) {
+      return res.status(400).json({ message: 'Client IDs array is required' });
+    }
+
+    // Validate that all IDs are valid MongoDB ObjectIds
+    const validIds = clientIds.filter(id => {
+      try {
+        return require('mongoose').Types.ObjectId.isValid(id);
+      } catch (error) {
+        return false;
+      }
+    });
+
+    if (validIds.length !== clientIds.length) {
+      return res.status(400).json({ message: 'Invalid client ID(s) provided' });
+    }
+
+    // Delete all clients
+    const result = await Client.deleteMany({ _id: { $in: validIds } });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ message: 'No clients found to delete' });
+    }
+
+    res.json({ 
+      message: `Successfully deleted ${result.deletedCount} client(s)`,
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    console.error('Bulk delete clients error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   getClients,
   createClient,
@@ -571,6 +624,7 @@ module.exports = {
   exportClients,
   importClients,
   deleteClient,
+  deleteClients,
   searchClients,
   addNote,
   deleteNote

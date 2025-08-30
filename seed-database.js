@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
 const Client = require('./models/clientModel');
 const User = require('./models/userModel');
 require('dotenv').config();
@@ -106,16 +105,12 @@ const createAdminUser = async () => {
       return existingAdmin;
     }
 
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash('Admin123', salt);
-
-    // Create admin user
+    // Create admin user (password will be auto-hashed by the model)
     const adminUser = await User.create({
       firstName: 'Admin',
       lastName: 'CRM',
       email: 'AdminCrm@gmail.com',
-      password: hashedPassword,
+      password: 'Admin123',
       role: 'admin'
     });
 
@@ -147,14 +142,11 @@ const createAgentUsers = async () => {
         continue;
       }
 
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash('Agent123', salt);
-
       const agent = await User.create({
         firstName: `Agent${i + 1}`,
         lastName: 'CRM',
         email: agentEmails[i],
-        password: hashedPassword,
+        password: 'Agent123',
         role: 'agent'
       });
 
