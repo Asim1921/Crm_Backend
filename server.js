@@ -19,6 +19,7 @@ connectDB();
 const allowedOrigins = [
   'https://crmama.com.mx',
   'https://www.crmama.com.mx',
+  'https://194.164.149.108',
   'https://crm-front-end-git-main-asimzamans-projects.vercel.app',
   'http://localhost:5173'
 ];
@@ -49,6 +50,12 @@ app.use(cors({
     // Allow localhost for development
     if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
       console.log('Localhost origin detected, allowing request');
+      return callback(null, true);
+    }
+    
+    // Allow IP addresses for direct access
+    if (origin.includes('194.164.149.108')) {
+      console.log('VPS IP origin detected, allowing request');
       return callback(null, true);
     }
     
