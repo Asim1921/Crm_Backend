@@ -25,27 +25,39 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function(origin, callback) {
+    console.log('CORS request from origin:', origin);
+    console.log('Allowed origins:', allowedOrigins);
+    
     // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
+    if (!origin) {
+      console.log('No origin, allowing request');
+      return callback(null, true);
+    }
     
     // Check if origin is in allowed list
     if (allowedOrigins.includes(origin)) {
+      console.log('Origin in allowed list, allowing request');
       return callback(null, true);
     }
     
     // Allow Vercel preview deployments (they have dynamic URLs)
     if (origin.includes('.vercel.app')) {
+      console.log('Vercel origin detected, allowing request');
       return callback(null, true);
     }
     
     // Allow localhost for development
     if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      console.log('Localhost origin detected, allowing request');
       return callback(null, true);
     }
     
+    console.log('Origin not allowed:', origin);
     callback(new Error('Not allowed by CORS'));
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Rate limiting disabled for development - remove in production if needed
@@ -103,6 +115,15 @@ app.get('/api/health', (req, res) => {
       status: dbStatus,
       readyState: mongoose.connection.readyState
     }
+  });
+});
+
+// CORS test endpoint
+app.get('/api/cors-test', (req, res) => {
+  res.json({ 
+    message: 'CORS is working!',
+    origin: req.headers.origin,
+    timestamp: new Date().toISOString()
   });
 });
 
