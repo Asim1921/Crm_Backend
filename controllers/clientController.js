@@ -12,6 +12,7 @@ const getClients = async (req, res) => {
     const status = req.query.status || '';
     const country = req.query.country || '';
     const campaign = req.query.campaign || '';
+    const agent = req.query.agent || '';
 
     const skip = (page - 1) * limit;
 
@@ -32,6 +33,10 @@ const getClients = async (req, res) => {
     
     if (campaign) {
       query.campaign = campaign;
+    }
+    
+    if (agent) {
+      query.assignedAgent = agent;
     }
 
     // Role-based filtering
