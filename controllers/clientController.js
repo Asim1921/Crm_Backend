@@ -13,6 +13,8 @@ const getClients = async (req, res) => {
     const country = req.query.country || '';
     const campaign = req.query.campaign || '';
     const agent = req.query.agent || '';
+    const registrationDate = req.query.registrationDate || '';
+    const endRegistrationDate = req.query.endRegistrationDate || '';
 
     const skip = (page - 1) * limit;
 
@@ -39,6 +41,30 @@ const getClients = async (req, res) => {
       query.assignedAgent = agent;
     }
 
+    // Date filtering
+    if (registrationDate) {
+      const startDate = new Date(registrationDate);
+      startDate.setHours(0, 0, 0, 0);
+      
+      if (endRegistrationDate) {
+        // Date range filtering
+        const endDate = new Date(endRegistrationDate);
+        endDate.setHours(23, 59, 59, 999);
+        query.createdAt = {
+          $gte: startDate,
+          $lte: endDate
+        };
+      } else {
+        // Exact date filtering
+        const endDate = new Date(registrationDate);
+        endDate.setHours(23, 59, 59, 999);
+        query.createdAt = {
+          $gte: startDate,
+          $lte: endDate
+        };
+      }
+    }
+
     // Role-based filtering
     if (req.user.role === 'agent') {
       query.assignedAgent = req.user._id;
@@ -46,6 +72,14 @@ const getClients = async (req, res) => {
 
     const clients = await Client.find(query)
       .populate('assignedAgent', 'firstName lastName')
+      .populate({
+        path: 'notes',
+        options: { sort: { createdAt: -1 }, limit: 1 },
+        populate: {
+          path: 'createdBy',
+          select: 'firstName lastName'
+        }
+      })
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });
@@ -55,6 +89,11 @@ const getClients = async (req, res) => {
     // Keep all data including phone numbers for agents (they need them for calls)
     // Phone numbers will be hidden in the frontend UI instead
     const filteredClients = clients.map(client => {
+      // Get the last comment/note
+      const lastComment = client.notes && client.notes.length > 0 
+        ? client.notes[0].content 
+        : null;
+
       if (req.user.role === 'agent') {
         return {
           _id: client._id,
@@ -68,10 +107,16 @@ const getClients = async (req, res) => {
           campaign: client.campaign,
           assignedAgent: client.assignedAgent,
           lastContact: client.lastContact,
-          createdAt: client.createdAt
+          createdAt: client.createdAt,
+          lastComment: lastComment
         };
       }
-      return client;
+      
+      // For admins, return full client data with last comment
+      return {
+        ...client.toObject(),
+        lastComment: lastComment
+      };
     });
 
     res.json({
