@@ -17,10 +17,9 @@ connectDB();
 // Security middleware
 
 const allowedOrigins = [
-  'https://crmama.com.mx',
-  'https://www.crmama.com.mx',
-  'https://194.164.149.108',
-  'https://crm-front-end-git-main-asimzamans-projects.vercel.app',
+  'https://crmax.com.mx',
+  'https://www.crmax.com.mx',
+  'https://72.60.71.64',
   'http://localhost:5173'
 ];
 
@@ -28,37 +27,25 @@ app.use(cors({
   origin: function(origin, callback) {
     console.log('CORS request from origin:', origin);
     console.log('Allowed origins:', allowedOrigins);
-    
+
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) {
       console.log('No origin, allowing request');
       return callback(null, true);
     }
-    
+
     // Check if origin is in allowed list
     if (allowedOrigins.includes(origin)) {
       console.log('Origin in allowed list, allowing request');
       return callback(null, true);
     }
-    
-    // Allow Vercel preview deployments (they have dynamic URLs)
-    if (origin.includes('.vercel.app')) {
-      console.log('Vercel origin detected, allowing request');
-      return callback(null, true);
-    }
-    
+
     // Allow localhost for development
     if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
       console.log('Localhost origin detected, allowing request');
       return callback(null, true);
     }
-    
-    // Allow IP addresses for direct access
-    if (origin.includes('194.164.149.108')) {
-      console.log('VPS IP origin detected, allowing request');
-      return callback(null, true);
-    }
-    
+
     console.log('Origin not allowed:', origin);
     callback(new Error('Not allowed by CORS'));
   },
@@ -113,9 +100,9 @@ app.use('/api/call-stats', require('./routes/callStatsRoutes'));
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
-  
-  res.json({ 
-    status: 'ok', 
+
+  res.json({
+    status: 'ok',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     environment: process.env.NODE_ENV || 'development',
@@ -128,7 +115,7 @@ app.get('/api/health', (req, res) => {
 
 // CORS test endpoint
 app.get('/api/cors-test', (req, res) => {
-  res.json({ 
+  res.json({
     message: 'CORS is working!',
     origin: req.headers.origin,
     timestamp: new Date().toISOString()
