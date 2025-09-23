@@ -124,6 +124,7 @@ const getClients = async (req, res) => {
       pagination: {
         current: page,
         total: Math.ceil(total / limit),
+        totalClients: total,
         hasNext: page * limit < total,
         hasPrev: page > 1
       }
