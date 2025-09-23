@@ -15,6 +15,10 @@ const getClients = async (req, res) => {
     const agent = req.query.agent || '';
     const registrationDate = req.query.registrationDate || '';
     const endRegistrationDate = req.query.endRegistrationDate || '';
+    const commentDate = req.query.commentDate || '';
+    const endCommentDate = req.query.endCommentDate || '';
+    const dateFilterType = req.query.dateFilterType || 'entry'; // 'entry' or 'comment'
+    const unassigned = req.query.unassigned === 'true';
 
     const skip = (page - 1) * limit;
 
@@ -37,38 +41,86 @@ const getClients = async (req, res) => {
       query.campaign = campaign;
     }
     
-    if (agent) {
+    // Handle agent and unassigned filters
+    if (unassigned) {
+      // If unassigned filter is active, show only clients without assigned agents
+      query.$or = [
+        { assignedAgent: { $exists: false } },
+        { assignedAgent: null }
+      ];
+    } else if (agent) {
+      // If specific agent filter is active, show only clients assigned to that agent
       query.assignedAgent = agent;
     }
 
     // Date filtering
-    if (registrationDate) {
-      const startDate = new Date(registrationDate);
-      startDate.setHours(0, 0, 0, 0);
-      
-      if (endRegistrationDate) {
-        // Date range filtering
-        const endDate = new Date(endRegistrationDate);
-        endDate.setHours(23, 59, 59, 999);
-        query.createdAt = {
-          $gte: startDate,
-          $lte: endDate
-        };
-      } else {
-        // Exact date filtering
-        const endDate = new Date(registrationDate);
-        endDate.setHours(23, 59, 59, 999);
-        query.createdAt = {
-          $gte: startDate,
-          $lte: endDate
-        };
+    if (dateFilterType === 'comment') {
+      // Filter by comment date
+      if (commentDate) {
+        const startDate = new Date(commentDate);
+        startDate.setHours(0, 0, 0, 0);
+        
+        if (endCommentDate) {
+          // Date range filtering for comments
+          const endDate = new Date(endCommentDate);
+          endDate.setHours(23, 59, 59, 999);
+          query['notes.createdAt'] = {
+            $gte: startDate,
+            $lte: endDate
+          };
+        } else {
+          // Exact date filtering for comments
+          const endDate = new Date(commentDate);
+          endDate.setHours(23, 59, 59, 999);
+          query['notes.createdAt'] = {
+            $gte: startDate,
+            $lte: endDate
+          };
+        }
+        // Ensure clients have notes
+        query.notes = { $exists: true, $ne: [] };
+      }
+    } else {
+      // Filter by CRM entry date (default)
+      if (registrationDate) {
+        const startDate = new Date(registrationDate);
+        startDate.setHours(0, 0, 0, 0);
+        
+        if (endRegistrationDate) {
+          // Date range filtering
+          const endDate = new Date(endRegistrationDate);
+          endDate.setHours(23, 59, 59, 999);
+          query.createdAt = {
+            $gte: startDate,
+            $lte: endDate
+          };
+        } else {
+          // Exact date filtering
+          const endDate = new Date(registrationDate);
+          endDate.setHours(23, 59, 59, 999);
+          query.createdAt = {
+            $gte: startDate,
+            $lte: endDate
+          };
+        }
       }
     }
 
-    // Role-based filtering
-    if (req.user.role === 'agent') {
+    // Role-based filtering (only if unassigned filter is not active)
+    if (req.user.role === 'agent' && !unassigned) {
       query.assignedAgent = req.user._id;
     }
+
+    // Debug logging for date filtering
+    console.log('Date filter debug:', {
+      dateFilterType,
+      registrationDate,
+      endRegistrationDate,
+      commentDate,
+      endCommentDate,
+      unassigned,
+      finalQuery: query
+    });
 
     const clients = await Client.find(query)
       .populate('assignedAgent', 'firstName lastName')
@@ -154,7 +206,7 @@ const createClient = async (req, res) => {
 
     const client = await Client.create({
       ...clientData,
-      assignedAgent: req.body.assignedAgent || req.user._id
+      assignedAgent: req.body.assignedAgent || null
     });
 
     await client.populate('assignedAgent', 'firstName lastName');
@@ -325,13 +377,24 @@ const assignClients = async (req, res) => {
 // @access  Private
 const exportClients = async (req, res) => {
   try {
-    const { format = 'json' } = req.query;
+    const { format = 'json', clientIds } = req.query;
     
     // Build query
     let query = {};
     
-    // Role-based filtering
-    if (req.user.role === 'agent') {
+    // If specific client IDs are provided, use them
+    if (clientIds) {
+      const ids = clientIds.split(',').filter(id => id.trim());
+      if (ids.length > 0) {
+        query._id = { $in: ids };
+      } else {
+        // If no valid IDs provided, return empty result
+        return res.status(400).json({ message: 'No valid client IDs provided' });
+      }
+    }
+    
+    // Role-based filtering (only apply if not filtering by specific IDs)
+    if (req.user.role === 'agent' && !clientIds) {
       query.assignedAgent = req.user._id;
     }
 

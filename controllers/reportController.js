@@ -69,6 +69,12 @@ const getDashboardStats = async (req, res) => {
       updatedAt: { $gte: startOfLastMonth, $lt: startOfMonth }
     });
 
+    // FTD RETENTION count
+    const ftdRetentionCount = await Client.countDocuments({
+      ...baseQuery,
+      status: 'FTD RETENTION'
+    });
+
     // Lead status overview
     const leadStatusOverview = await Client.aggregate([
       { $match: baseQuery },
@@ -146,11 +152,145 @@ const getDashboardStats = async (req, res) => {
         change: ftdChangePercent > 0 ? `+${ftdChangePercent}%` : `${ftdChangePercent}%`,
         changeValue: parseFloat(ftdChangePercent)
       },
+      ftdRetention: {
+        value: ftdRetentionCount,
+        change: 'Retention clients'
+      },
       leadStatusOverview,
       campaignOverview,
       recentClients: filteredRecentClients
     });
   } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Get lead status overview with filters
+// @route   GET /api/reports/lead-status-overview
+// @access  Private
+const getLeadStatusOverview = async (req, res) => {
+  try {
+    const search = req.query.search || '';
+    const country = req.query.country || '';
+    const campaign = req.query.campaign || '';
+    const agent = req.query.agent || '';
+    const registrationDate = req.query.registrationDate || '';
+    const endRegistrationDate = req.query.endRegistrationDate || '';
+    const commentDate = req.query.commentDate || '';
+    const endCommentDate = req.query.endCommentDate || '';
+    const dateFilterType = req.query.dateFilterType || 'entry';
+    const unassigned = req.query.unassigned === 'true';
+
+    // Build query (same logic as getClients)
+    let query = {};
+    
+    if (search) {
+      query.$text = { $search: search };
+    }
+    
+    if (country) {
+      query.country = { $regex: country, $options: 'i' };
+    }
+    
+    if (campaign) {
+      query.campaign = campaign;
+    }
+    
+    // Handle agent and unassigned filters
+    if (unassigned) {
+      query.$or = [
+        { assignedAgent: { $exists: false } },
+        { assignedAgent: null }
+      ];
+    } else if (agent) {
+      query.assignedAgent = agent;
+    }
+
+    // Date filtering
+    if (dateFilterType === 'comment') {
+      if (commentDate) {
+        const startDate = new Date(commentDate);
+        startDate.setHours(0, 0, 0, 0);
+
+        if (endCommentDate) {
+          const endDate = new Date(endCommentDate);
+          endDate.setHours(23, 59, 59, 999);
+          query['notes.createdAt'] = {
+            $gte: startDate,
+            $lte: endDate
+          };
+        } else {
+          const endDate = new Date(commentDate);
+          endDate.setHours(23, 59, 59, 999);
+          query['notes.createdAt'] = {
+            $gte: startDate,
+            $lte: endDate
+          };
+        }
+        query.notes = { $exists: true, $ne: [] };
+      }
+    } else {
+      if (registrationDate) {
+        const startDate = new Date(registrationDate);
+        startDate.setHours(0, 0, 0, 0);
+
+        if (endRegistrationDate) {
+          const endDate = new Date(endRegistrationDate);
+          endDate.setHours(23, 59, 59, 999);
+          query.createdAt = {
+            $gte: startDate,
+            $lte: endDate
+          };
+        } else {
+          const endDate = new Date(registrationDate);
+          endDate.setHours(23, 59, 59, 999);
+          query.createdAt = {
+            $gte: startDate,
+            $lte: endDate
+          };
+        }
+      }
+    }
+
+    // Apply role-based filtering
+    if (req.user.role === 'agent' && !unassigned) {
+      query.assignedAgent = req.user._id;
+    }
+
+    // Get lead status overview for ALL clients matching the filters
+    const leadStatusOverview = await Client.aggregate([
+      { $match: query },
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { count: -1 } }
+    ]);
+
+    // Get campaign overview for ALL clients matching the filters
+    const campaignOverview = await Client.aggregate([
+      { $match: query },
+      {
+        $group: {
+          _id: '$campaign',
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { count: -1 } }
+    ]);
+
+    // Get total count for ALL clients matching the filters
+    const totalClients = await Client.countDocuments(query);
+
+    res.json({
+      leadStatusOverview,
+      campaignOverview,
+      totalClients
+    });
+  } catch (error) {
+    console.error('Error fetching lead status overview:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -330,5 +470,6 @@ const getUserStats = async (req, res) => {
 module.exports = {
   getDashboardStats,
   getAnalytics,
+  getLeadStatusOverview,
   getUserStats
 };
