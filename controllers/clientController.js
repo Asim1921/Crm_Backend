@@ -89,9 +89,12 @@ const getClients = async (req, res) => {
     // Keep all data including phone numbers for agents (they need them for calls)
     // Phone numbers will be hidden in the frontend UI instead
     const filteredClients = clients.map(client => {
-      // Get the last comment/note
+      // Get the last comment/note and its date
       const lastComment = client.notes && client.notes.length > 0 
         ? client.notes[0].content 
+        : null;
+      const lastCommentDate = client.notes && client.notes.length > 0 
+        ? client.notes[0].createdAt 
         : null;
 
       if (req.user.role === 'agent') {
@@ -108,14 +111,16 @@ const getClients = async (req, res) => {
           assignedAgent: client.assignedAgent,
           lastContact: client.lastContact,
           createdAt: client.createdAt,
-          lastComment: lastComment
+          lastComment: lastComment,
+          lastCommentDate: lastCommentDate
         };
       }
       
-      // For admins, return full client data with last comment
+      // For admins, return full client data with last comment and date
       return {
         ...client.toObject(),
-        lastComment: lastComment
+        lastComment: lastComment,
+        lastCommentDate: lastCommentDate
       };
     });
 
