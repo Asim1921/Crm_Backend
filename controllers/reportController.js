@@ -4,6 +4,7 @@
 const Client = require('../models/clientModel');
 const Task = require('../models/taskModel');
 const User = require('../models/userModel');
+const mongoose = require('mongoose');
 
 // @desc    Get dashboard statistics
 // @route   GET /api/reports/dashboard
@@ -181,6 +182,10 @@ const getLeadStatusOverview = async (req, res) => {
     const dateFilterType = req.query.dateFilterType || 'entry';
     const unassigned = req.query.unassigned === 'true';
 
+    console.log('Lead Status Overview - Query params:', {
+      search, country, campaign, agent, unassigned, dateFilterType
+    });
+
     // Build query (same logic as getClients)
     let query = {};
     
@@ -203,7 +208,12 @@ const getLeadStatusOverview = async (req, res) => {
         { assignedAgent: null }
       ];
     } else if (agent) {
-      query.assignedAgent = agent;
+      // Convert agent ID to ObjectId if it's a valid MongoDB ObjectId string
+      if (mongoose.Types.ObjectId.isValid(agent)) {
+        query.assignedAgent = new mongoose.Types.ObjectId(agent);
+      } else {
+        query.assignedAgent = agent;
+      }
     }
 
     // Date filtering
@@ -254,8 +264,10 @@ const getLeadStatusOverview = async (req, res) => {
 
     // Apply role-based filtering
     if (req.user.role === 'agent' && !unassigned) {
-      query.assignedAgent = req.user._id;
+      query.assignedAgent = new mongoose.Types.ObjectId(req.user._id);
     }
+
+    console.log('Lead Status Overview - Final query:', JSON.stringify(query, null, 2));
 
     // Get lead status overview for ALL clients matching the filters
     const leadStatusOverview = await Client.aggregate([
@@ -283,6 +295,12 @@ const getLeadStatusOverview = async (req, res) => {
 
     // Get total count for ALL clients matching the filters
     const totalClients = await Client.countDocuments(query);
+
+    console.log('Lead Status Overview - Results:', {
+      leadStatusOverview,
+      campaignOverview,
+      totalClients
+    });
 
     res.json({
       leadStatusOverview,
