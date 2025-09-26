@@ -175,9 +175,16 @@ const downloadDocument = async (req, res) => {
       return res.status(404).json({ message: 'Document not found' });
     }
 
-    const filePath = path.join(__dirname, '../uploads/kyc', document.fileName);
+    // Try both old path and new user-specific path
+    const oldFilePath = path.join(__dirname, '../uploads/kyc', document.fileName);
+    const userFilePath = path.join(__dirname, '../uploads/kyc/user_' + kyc.userId, document.fileName);
     
-    if (!fs.existsSync(filePath)) {
+    let filePath;
+    if (fs.existsSync(userFilePath)) {
+      filePath = userFilePath;
+    } else if (fs.existsSync(oldFilePath)) {
+      filePath = oldFilePath;
+    } else {
       return res.status(404).json({ message: 'File not found on server' });
     }
 
@@ -259,9 +266,14 @@ const deleteKyc = async (req, res) => {
     documentTypes.forEach(docType => {
       const document = kyc.documents[docType];
       if (document && document.fileName) {
-        const filePath = path.join(__dirname, '../uploads/kyc', document.fileName);
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
+        // Try both old path and new user-specific path
+        const oldFilePath = path.join(__dirname, '../uploads/kyc', document.fileName);
+        const userFilePath = path.join(__dirname, '../uploads/kyc/user_' + kyc.userId, document.fileName);
+        
+        if (fs.existsSync(userFilePath)) {
+          fs.unlinkSync(userFilePath);
+        } else if (fs.existsSync(oldFilePath)) {
+          fs.unlinkSync(oldFilePath);
         }
       }
     });
@@ -303,7 +315,14 @@ const submitKycJson = async (req, res) => {
     // Check if user already has a KYC submission
     const existingKyc = await KYC.findOne({ userId });
     if (existingKyc) {
-      console.log('Updating existing KYC submission for user:', userId);
+      // If KYC is already approved or rejected, don't allow updates
+      if (existingKyc.status === 'approved' || existingKyc.status === 'rejected') {
+        return res.status(400).json({ 
+          message: 'KYC has already been processed. Cannot update approved/rejected submissions.',
+          status: existingKyc.status
+        });
+      }
+      console.log('Updating existing pending KYC submission for user:', userId);
     }
 
     // Process base64 documents from JSON
@@ -327,14 +346,14 @@ const submitKycJson = async (req, res) => {
             const extension = mimeType.includes('pdf') ? '.pdf' : '.jpg';
             const fileName = `${docType}-${uniqueSuffix}${extension}`;
             
-            // Ensure upload directory exists
-            const uploadDir = 'uploads/kyc';
-            if (!fs.existsSync(uploadDir)) {
-              fs.mkdirSync(uploadDir, { recursive: true });
+            // Create user-specific directory
+            const userDir = `uploads/kyc/user_${userId}`;
+            if (!fs.existsSync(userDir)) {
+              fs.mkdirSync(userDir, { recursive: true });
             }
             
-            // Save file
-            const filePath = path.join(uploadDir, fileName);
+            // Save file in user-specific directory
+            const filePath = path.join(userDir, fileName);
             fs.writeFileSync(filePath, buffer);
             
             processedDocuments[docType] = {
@@ -370,11 +389,17 @@ const submitKycJson = async (req, res) => {
       if (existingKyc.documents) {
         for (const [docType, docData] of Object.entries(existingKyc.documents)) {
           if (docData && docData.fileName) {
+            // Try both old path (uploads/kyc) and new user-specific path
             const oldFilePath = path.join('uploads/kyc', docData.fileName);
+            const userFilePath = path.join('uploads/kyc/user_' + userId, docData.fileName);
+            
             try {
               if (fs.existsSync(oldFilePath)) {
                 fs.unlinkSync(oldFilePath);
                 console.log('Deleted old file:', oldFilePath);
+              } else if (fs.existsSync(userFilePath)) {
+                fs.unlinkSync(userFilePath);
+                console.log('Deleted old file:', userFilePath);
               }
             } catch (error) {
               console.error('Error deleting old file:', error);
