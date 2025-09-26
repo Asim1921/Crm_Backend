@@ -282,13 +282,22 @@ const submitKycJson = async (req, res) => {
   try {
     console.log('=== KYC JSON SUBMIT REQUEST ===');
     console.log('Request body:', req.body);
+    console.log('Request files:', req.files);
+    console.log('Content-Type:', req.headers['content-type']);
+    console.log('User from auth:', req.user);
     
-    const { fullName, idNumber, country, userId, documents } = req.body;
+    const { fullName, idNumber, country } = req.body;
+    const userId = req.user._id; // Get userId from authenticated user
+
+    console.log('Extracted fields:', { fullName, idNumber, country, userId });
 
     // Validate required fields
-    if (!fullName || !idNumber || !country || !userId) {
-      console.log('Missing required fields:', { fullName, idNumber, country, userId });
-      return res.status(400).json({ message: 'All fields are required' });
+    if (!fullName || !idNumber || !country) {
+      console.log('Missing required fields:', { fullName, idNumber, country });
+      return res.status(400).json({ 
+        message: 'All fields are required',
+        received: { fullName, idNumber, country, userId }
+      });
     }
 
     // Check if user already has a KYC submission
@@ -297,42 +306,49 @@ const submitKycJson = async (req, res) => {
       console.log('Updating existing KYC submission for user:', userId);
     }
 
-    // Process base64 documents
+    // Process base64 documents from JSON
     const processedDocuments = {};
     const documentTypes = ['selfie', 'idFront', 'idBack', 'paymentProof', 'bankStatement', 'utilityBill'];
 
-    for (const docType of documentTypes) {
-      if (documents[docType]) {
-        const base64Data = documents[docType];
-        const matches = base64Data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-        
-        if (matches && matches.length === 3) {
-          const mimeType = matches[1];
-          const base64String = matches[2];
-          const buffer = Buffer.from(base64String, 'base64');
+    if (req.body.documents) {
+      for (const docType of documentTypes) {
+        const base64Data = req.body.documents[docType];
+        if (base64Data) {
+          console.log(`Processing ${docType} document`);
+          const matches = base64Data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
           
-          // Create unique filename
-          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-          const extension = mimeType.includes('pdf') ? '.pdf' : '.jpg';
-          const fileName = `${docType}-${uniqueSuffix}${extension}`;
-          
-          // Ensure upload directory exists
-          const uploadDir = 'uploads/kyc';
-          if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
+          if (matches && matches.length === 3) {
+            const mimeType = matches[1];
+            const base64String = matches[2];
+            const buffer = Buffer.from(base64String, 'base64');
+            
+            // Create unique filename
+            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+            const extension = mimeType.includes('pdf') ? '.pdf' : '.jpg';
+            const fileName = `${docType}-${uniqueSuffix}${extension}`;
+            
+            // Ensure upload directory exists
+            const uploadDir = 'uploads/kyc';
+            if (!fs.existsSync(uploadDir)) {
+              fs.mkdirSync(uploadDir, { recursive: true });
+            }
+            
+            // Save file
+            const filePath = path.join(uploadDir, fileName);
+            fs.writeFileSync(filePath, buffer);
+            
+            processedDocuments[docType] = {
+              fileName: fileName,
+              originalName: `${docType}${extension}`,
+              mimeType: mimeType,
+              size: buffer.length,
+              uploadedAt: new Date()
+            };
+            
+            console.log(`Saved ${docType} document: ${fileName}`);
+          } else {
+            console.log(`Invalid base64 format for ${docType}`);
           }
-          
-          // Save file
-          const filePath = path.join(uploadDir, fileName);
-          fs.writeFileSync(filePath, buffer);
-          
-          processedDocuments[docType] = {
-            fileName: fileName,
-            originalName: `${docType}${extension}`,
-            mimeType: mimeType,
-            size: buffer.length,
-            uploadedAt: new Date()
-          };
         }
       }
     }
