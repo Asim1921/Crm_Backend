@@ -94,6 +94,7 @@ app.use('/api/tasks', require('./routes/taskRoutes'));
 app.use('/api/reports', require('./routes/reportRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/communications', require('./routes/communicationRoutes'));
+app.use('/api/click2call', require('./routes/click2CallRoutes'));
 app.use('/api/twilio', require('./routes/twilioRoutes'));
 app.use('/api/call-stats', require('./routes/callStatsRoutes'));
 app.use('/api/kyc', require('./routes/kycRoutes'));
