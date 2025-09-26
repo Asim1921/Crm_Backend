@@ -96,6 +96,7 @@ app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/communications', require('./routes/communicationRoutes'));
 app.use('/api/twilio', require('./routes/twilioRoutes'));
 app.use('/api/call-stats', require('./routes/callStatsRoutes'));
+app.use('/api/kyc', require('./routes/kycRoutes'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
