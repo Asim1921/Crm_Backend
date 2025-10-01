@@ -6,7 +6,10 @@ const {
   getServiceStatus,
   makeCall,
   endCall,
-  testCall
+  testCall,
+  getUserInfo,
+  directApiTest,
+  simpleServiceTest
 } = require('../controllers/click2CallController');
 
 // Apply authentication middleware to all routes
@@ -26,5 +29,14 @@ router.post('/end-call', endCall);
 
 // Test call (for debugging)
 router.post('/test-call', testCall);
+
+// Get user info (for debugging)
+router.get('/user-info', getUserInfo);
+
+// Direct API test (for debugging)
+router.post('/direct-test', directApiTest);
+
+// Simple service test (for debugging)
+router.get('/simple-test', simpleServiceTest);
 
 module.exports = router;

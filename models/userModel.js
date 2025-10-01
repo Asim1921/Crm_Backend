@@ -43,6 +43,11 @@ const userSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  extension: {
+    type: String,
+    trim: true,
+    default: '1000'
+  },
   bio: {
     type: String,
     trim: true,
