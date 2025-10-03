@@ -95,6 +95,7 @@ app.use('/api/reports', require('./routes/reportRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/communications', require('./routes/communicationRoutes'));
 app.use('/api/click2call', require('./routes/click2CallRoutes'));
+app.use('/api/ami-click2call', require('./routes/amiClick2CallRoutes'));
 app.use('/api/twilio', require('./routes/twilioRoutes'));
 app.use('/api/call-stats', require('./routes/callStatsRoutes'));
 app.use('/api/kyc', require('./routes/kycRoutes'));
@@ -128,6 +129,30 @@ app.get('/api/cors-test', (req, res) => {
 app.use(require('./middleware/errorMiddleware'));
 
 const PORT = process.env.PORT || 5000;
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  console.error('Stack:', err.stack);
+  // Don't exit the process, just log the error
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (err, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', err);
+  // Don't exit the process, just log the error
+});
+
+// Handle SIGTERM and SIGINT gracefully
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down gracefully');
+  process.exit(0);
+});
 
 app.listen(PORT,'0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
