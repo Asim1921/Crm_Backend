@@ -129,7 +129,7 @@ const getClients = async (req, res) => {
         options: { sort: { createdAt: -1 }, limit: 1 },
         populate: {
           path: 'createdBy',
-          select: 'firstName lastName'
+          select: 'firstName lastName role'
         }
       })
       .skip(skip)
@@ -141,13 +141,14 @@ const getClients = async (req, res) => {
     // Keep all data including phone numbers for agents (they need them for calls)
     // Phone numbers will be hidden in the frontend UI instead
     const filteredClients = clients.map(client => {
-      // Get the last comment/note and its date
-      const lastComment = client.notes && client.notes.length > 0 
-        ? client.notes[0].content 
-        : null;
-      const lastCommentDate = client.notes && client.notes.length > 0 
-        ? client.notes[0].createdAt 
-        : null;
+      // Get the last comment/note and its details
+      const lastNote = client.notes && client.notes.length > 0 ? client.notes[0] : null;
+      const lastComment = lastNote ? lastNote.content : null;
+      const lastCommentDate = lastNote ? lastNote.createdAt : null;
+      const lastCommentAuthor = lastNote && lastNote.createdBy ? {
+        name: `${lastNote.createdBy.firstName} ${lastNote.createdBy.lastName}`,
+        role: lastNote.createdBy.role
+      } : null;
 
       if (req.user.role === 'agent') {
         return {
@@ -164,7 +165,8 @@ const getClients = async (req, res) => {
           lastContact: client.lastContact,
           createdAt: client.createdAt,
           lastComment: lastComment,
-          lastCommentDate: lastCommentDate
+          lastCommentDate: lastCommentDate,
+          lastCommentAuthor: lastCommentAuthor
         };
       }
       
@@ -172,7 +174,8 @@ const getClients = async (req, res) => {
       return {
         ...client.toObject(),
         lastComment: lastComment,
-        lastCommentDate: lastCommentDate
+        lastCommentDate: lastCommentDate,
+        lastCommentAuthor: lastCommentAuthor
       };
     });
 
@@ -254,7 +257,7 @@ const getClientById = async (req, res) => {
   try {
     const client = await Client.findById(req.params.id)
       .populate('assignedAgent', 'firstName lastName')
-      .populate('notes.createdBy', 'firstName lastName');
+      .populate('notes.createdBy', 'firstName lastName role');
 
     if (!client) {
       return res.status(404).json({ message: 'Client not found' });
@@ -356,11 +359,40 @@ const assignClients = async (req, res) => {
       return res.status(400).json({ message: 'Invalid agent' });
     }
 
-    // Update all clients
-    const result = await Client.updateMany(
-      { _id: { $in: clientIds } },
-      { assignedAgent: agentId }
-    );
+    // Get the current clients to track previous assignments
+    const currentClients = await Client.find({ _id: { $in: clientIds } })
+      .populate('assignedAgent', 'firstName lastName');
+
+    // Update all clients and add transfer notes
+    const updatePromises = clientIds.map(async (clientId) => {
+      const client = currentClients.find(c => c._id.toString() === clientId);
+      const previousAgent = client?.assignedAgent;
+      
+      // Update the client
+      const updatedClient = await Client.findByIdAndUpdate(
+        clientId,
+        { assignedAgent: agentId },
+        { new: true }
+      );
+
+      // Add a note if the client was previously assigned to a different agent
+      if (previousAgent && previousAgent._id.toString() !== agentId) {
+        const transferNote = {
+          content: `Client transferred from ${previousAgent.firstName} ${previousAgent.lastName} to ${agent.firstName} ${agent.lastName}`,
+          createdBy: req.user._id,
+          createdAt: new Date()
+        };
+        
+        updatedClient.notes = updatedClient.notes || [];
+        updatedClient.notes.push(transferNote);
+        await updatedClient.save();
+      }
+      
+      return updatedClient;
+    });
+
+    await Promise.all(updatePromises);
+    const result = { modifiedCount: clientIds.length };
 
     res.json({ 
       message: `Successfully assigned ${result.modifiedCount} clients to ${agent.firstName} ${agent.lastName}`,

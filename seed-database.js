@@ -82,7 +82,9 @@ const statuses = [
   'No Answer',
   'NA5UP',
   'Not Interested',
-  'Hang Up'
+  'Hang Up',
+  'Wrong Number',
+  'Wrong Name'
 ];
 
 const campaigns = ['Data', 'Affiliate'];
