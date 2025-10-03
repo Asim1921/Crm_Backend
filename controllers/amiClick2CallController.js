@@ -85,8 +85,12 @@ const makeAmiCall = async (req, res) => {
     // Path to the Python script
     const pythonScriptPath = path.join(__dirname, amiConfig.pythonScriptPath);
     
+    // Try to find a working Python command
+    const pythonCommands = amiConfig.pythonFallbackCommands || ['python3', 'python', 'py'];
+    let pythonCommand = amiConfig.pythonCommand;
+    
     // Execute the Python script with phone number and extension as arguments
-    const pythonProcess = spawn(amiConfig.pythonCommand, [pythonScriptPath, formattedPhone, extension], {
+    const pythonProcess = spawn(pythonCommand, [pythonScriptPath, formattedPhone, extension], {
       stdio: ['pipe', 'pipe', 'pipe']
     });
 
@@ -146,12 +150,24 @@ const makeAmiCall = async (req, res) => {
       responseSent = true;
       
       console.error('Failed to start Python process:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to execute AMI script',
-        message: error.message,
-        details: 'Python script could not be executed. Please ensure Python is installed and the script path is correct.'
-      });
+      
+      // Check if it's a Python not found error
+      if (error.code === 'ENOENT') {
+        res.status(500).json({
+          success: false,
+          error: 'Python not found',
+          message: 'Python is not installed on the server. Please install Python 3.11 or later.',
+          details: `Command '${pythonCommand}' not found. Please install Python and ensure it's in the system PATH.`,
+          solution: 'Install Python on your server: sudo apt install python3.11 (Ubuntu/Debian) or sudo yum install python3.11 (CentOS/RHEL)'
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          error: 'Failed to execute AMI script',
+          message: error.message,
+          details: 'Python script could not be executed. Please ensure Python is installed and the script path is correct.'
+        });
+      }
     });
 
     // Set timeout for the Python process (30 seconds)

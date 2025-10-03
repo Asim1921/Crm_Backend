@@ -17,7 +17,8 @@ const amiConfig = {
   
   // Python script configuration
   pythonScriptPath: process.env.PYTHON_SCRIPT_PATH || '../../Crm_FrontEnd/src/lamda.py',
-  pythonCommand: process.env.PYTHON_COMMAND || 'python', // or 'python3' on some systems
+  pythonCommand: process.env.PYTHON_COMMAND || 'python3.13', // Default to python3.13 for production
+  pythonFallbackCommands: ['python3.13', 'python3', 'python', 'py'], // Try these commands in order
   
   // Call flow settings
   callFlow: {
