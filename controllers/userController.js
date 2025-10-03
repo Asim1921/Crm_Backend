@@ -165,9 +165,9 @@ const createUser = async (req, res) => {
       return res.status(400).json({ message: 'User already exists with this email' });
     }
 
-    // Validate role - only allow agent or manager roles
-    if (role && !['agent', 'manager'].includes(role)) {
-      return res.status(400).json({ message: 'Invalid role. Only agent or manager roles are allowed.' });
+    // Validate role - only allow agent, manager, or tl roles
+    if (role && !['agent', 'manager', 'tl'].includes(role)) {
+      return res.status(400).json({ message: 'Invalid role. Only agent, manager, or tl roles are allowed.' });
     }
 
     // Create user

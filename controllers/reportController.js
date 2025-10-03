@@ -21,6 +21,7 @@ const getDashboardStats = async (req, res) => {
     if (req.user.role === 'agent') {
       baseQuery.assignedAgent = req.user._id;
     }
+    // TL role can see all clients, no additional filtering needed
 
     // Total clients
     const totalClients = await Client.countDocuments(baseQuery);
@@ -266,6 +267,7 @@ const getLeadStatusOverview = async (req, res) => {
     if (req.user.role === 'agent' && !unassigned) {
       query.assignedAgent = new mongoose.Types.ObjectId(req.user._id);
     }
+    // TL role can see all clients, no additional filtering needed
 
     console.log('Lead Status Overview - Final query:', JSON.stringify(query, null, 2));
 
@@ -341,6 +343,7 @@ const getAnalytics = async (req, res) => {
     if (req.user.role === 'agent') {
       baseQuery.assignedAgent = req.user._id;
     }
+    // TL role can see all clients, no additional filtering needed
 
     // Lead status distribution
     const leadStatusDistribution = await Client.aggregate([
@@ -417,7 +420,7 @@ const getAnalytics = async (req, res) => {
 // @access  Private (Admin only)
 const getUserStats = async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== 'admin' && req.user.role !== 'tl') {
       return res.status(403).json({ message: 'Access denied' });
     }
 

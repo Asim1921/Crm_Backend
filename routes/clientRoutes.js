@@ -13,6 +13,7 @@ const {
   deleteClients,
   searchClients,
   addNote,
+  markNoteAsViewed,
   deleteNote
 } = require('../controllers/clientController');
 const { protect, admin, agent } = require('../middleware/authMiddleware');
@@ -60,5 +61,8 @@ router.route('/:id/notes')
 
 router.route('/:id/notes/:noteId')
   .delete(agent, deleteNote);
+
+router.route('/:id/notes/:noteId/view')
+  .put(agent, markNoteAsViewed);
 
 module.exports = router;

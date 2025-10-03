@@ -71,6 +71,13 @@ const clientSchema = new mongoose.Schema({
     createdAt: {
       type: Date,
       default: Date.now
+    },
+    lastViewedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    lastViewedAt: {
+      type: Date
     }
   }],
   lastContact: {

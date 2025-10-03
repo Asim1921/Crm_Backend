@@ -110,6 +110,7 @@ const getClients = async (req, res) => {
     if (req.user.role === 'agent' && !unassigned) {
       query.assignedAgent = req.user._id;
     }
+    // TL role can see all clients, no additional filtering needed
 
     // Debug logging for date filtering
     console.log('Date filter debug:', {
@@ -126,11 +127,16 @@ const getClients = async (req, res) => {
       .populate('assignedAgent', 'firstName lastName')
       .populate({
         path: 'notes',
-        options: { sort: { createdAt: -1 }, limit: 1 },
-        populate: {
-          path: 'createdBy',
-          select: 'firstName lastName role'
-        }
+        populate: [
+          {
+            path: 'createdBy',
+            select: 'firstName lastName role'
+          },
+          {
+            path: 'lastViewedBy',
+            select: 'firstName lastName role'
+          }
+        ]
       })
       .skip(skip)
       .limit(limit)
@@ -142,12 +148,35 @@ const getClients = async (req, res) => {
     // Phone numbers will be hidden in the frontend UI instead
     const filteredClients = clients.map(client => {
       // Get the last comment/note and its details
-      const lastNote = client.notes && client.notes.length > 0 ? client.notes[0] : null;
+      console.log(`Client ${client.clientId} has ${client.notes ? client.notes.length : 0} notes`);
+      let lastNote = null;
+      
+      if (client.notes && client.notes.length > 0) {
+        console.log(`All notes for client ${client.clientId}:`);
+        client.notes.forEach((note, index) => {
+          console.log(`  Note ${index}: "${note.content}" - Created: ${note.createdAt}`);
+        });
+        
+        // Sort notes by createdAt in descending order to get the latest one
+        const sortedNotes = client.notes.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        lastNote = sortedNotes[0];
+        
+        console.log(`Latest note for client ${client.clientId}:`, lastNote.content);
+        console.log(`Note created at:`, lastNote.createdAt);
+        console.log(`Note createdBy:`, lastNote.createdBy ? `${lastNote.createdBy.firstName} ${lastNote.createdBy.lastName}` : 'No creator');
+        console.log(`Note lastViewedBy:`, lastNote.lastViewedBy ? `${lastNote.lastViewedBy.firstName} ${lastNote.lastViewedBy.lastName}` : 'No viewer');
+      }
+      
       const lastComment = lastNote ? lastNote.content : null;
       const lastCommentDate = lastNote ? lastNote.createdAt : null;
       const lastCommentAuthor = lastNote && lastNote.createdBy ? {
         name: `${lastNote.createdBy.firstName} ${lastNote.createdBy.lastName}`,
         role: lastNote.createdBy.role
+      } : null;
+      const lastCommentViewer = lastNote && lastNote.lastViewedBy ? {
+        name: `${lastNote.lastViewedBy.firstName} ${lastNote.lastViewedBy.lastName}`,
+        role: lastNote.lastViewedBy.role,
+        viewedAt: lastNote.lastViewedAt
       } : null;
 
       if (req.user.role === 'agent') {
@@ -166,7 +195,28 @@ const getClients = async (req, res) => {
           createdAt: client.createdAt,
           lastComment: lastComment,
           lastCommentDate: lastCommentDate,
-          lastCommentAuthor: lastCommentAuthor
+          lastCommentAuthor: lastCommentAuthor,
+          lastCommentViewer: lastCommentViewer
+        };
+      } else if (req.user.role === 'tl') {
+        // TL gets all data except phone numbers
+        return {
+          _id: client._id,
+          clientId: client.clientId,
+          firstName: client.firstName,
+          lastName: client.lastName,
+          email: client.email,
+          phone: null, // Hide phone numbers for TL
+          country: client.country,
+          status: client.status,
+          campaign: client.campaign,
+          assignedAgent: client.assignedAgent,
+          lastContact: client.lastContact,
+          createdAt: client.createdAt,
+          lastComment: lastComment,
+          lastCommentDate: lastCommentDate,
+          lastCommentAuthor: lastCommentAuthor,
+          lastCommentViewer: lastCommentViewer
         };
       }
       
@@ -175,7 +225,8 @@ const getClients = async (req, res) => {
         ...client.toObject(),
         lastComment: lastComment,
         lastCommentDate: lastCommentDate,
-        lastCommentAuthor: lastCommentAuthor
+        lastCommentAuthor: lastCommentAuthor,
+        lastCommentViewer: lastCommentViewer
       };
     });
 
@@ -257,13 +308,14 @@ const getClientById = async (req, res) => {
   try {
     const client = await Client.findById(req.params.id)
       .populate('assignedAgent', 'firstName lastName')
-      .populate('notes.createdBy', 'firstName lastName role');
+      .populate('notes.createdBy', 'firstName lastName role')
+      .populate('notes.lastViewedBy', 'firstName lastName role');
 
     if (!client) {
       return res.status(404).json({ message: 'Client not found' });
     }
 
-    // Check permissions
+    // Check permissions - agents can only see their own clients, TL and admin can see all
     if (req.user.role === 'agent' && client.assignedAgent._id.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'Not authorized' });
     }
@@ -287,8 +339,27 @@ const getClientById = async (req, res) => {
         createdAt: client.createdAt
       };
       return res.json(filteredClient);
+    } else if (req.user.role === 'tl') {
+      // TL gets all data except phone numbers
+      const filteredClient = {
+        _id: client._id,
+        clientId: client.clientId,
+        firstName: client.firstName,
+        lastName: client.lastName,
+        email: client.email,
+        phone: null, // Hide phone numbers for TL
+        country: client.country,
+        status: client.status,
+        campaign: client.campaign,
+        assignedAgent: client.assignedAgent,
+        notes: client.notes,
+        lastContact: client.lastContact,
+        createdAt: client.createdAt
+      };
+      return res.json(filteredClient);
     }
 
+    // Admin gets all data
     res.json(client);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
@@ -305,6 +376,7 @@ const getUniqueCountries = async (req, res) => {
     if (req.user.role === 'agent') {
       query.assignedAgent = req.user._id;
     }
+    // TL role can see all countries, no additional filtering needed
 
     const countries = await Client.distinct('country', query);
     const sortedCountries = countries.filter(Boolean).sort();
@@ -320,7 +392,7 @@ const getUniqueCountries = async (req, res) => {
 // @access  Private (Admin only)
 const getAvailableAgents = async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== 'admin' && req.user.role !== 'tl') {
       return res.status(403).json({ message: 'Access denied' });
     }
 
@@ -429,12 +501,13 @@ const exportClients = async (req, res) => {
     if (req.user.role === 'agent' && !clientIds) {
       query.assignedAgent = req.user._id;
     }
+    // TL role can see all clients, no additional filtering needed
 
     const clients = await Client.find(query)
       .populate('assignedAgent', 'firstName lastName')
       .sort({ createdAt: -1 });
 
-    // Filter sensitive data for agents
+    // Filter sensitive data for agents and TL
     const filteredClients = clients.map(client => {
       if (req.user.role === 'agent') {
         return {
@@ -442,6 +515,19 @@ const exportClients = async (req, res) => {
           lastName: client.lastName,
           email: client.email,
           phone: client.phone,
+          country: client.country,
+          status: client.status,
+          assignedAgent: client.assignedAgent ? `${client.assignedAgent.firstName} ${client.assignedAgent.lastName}` : 'Unassigned',
+          lastContact: client.lastContact,
+          createdAt: client.createdAt
+        };
+      } else if (req.user.role === 'tl') {
+        // TL gets all data except phone numbers
+        return {
+          firstName: client.firstName,
+          lastName: client.lastName,
+          email: client.email,
+          phone: null, // Hide phone numbers for TL
           country: client.country,
           status: client.status,
           assignedAgent: client.assignedAgent ? `${client.assignedAgent.firstName} ${client.assignedAgent.lastName}` : 'Unassigned',
@@ -603,6 +689,7 @@ const searchClients = async (req, res) => {
     if (req.user.role === 'agent') {
       query.assignedAgent = req.user._id;
     }
+    // TL role can see all clients, no additional filtering needed
 
     const clients = await Client.find(query)
       .populate('assignedAgent', 'firstName lastName')
@@ -621,6 +708,20 @@ const searchClients = async (req, res) => {
           lastName: client.lastName,
           email: client.email, // Keep email for agents
           phone: client.phone, // Keep phone for agents to make calls
+          country: client.country,
+          status: client.status,
+          campaign: client.campaign,
+          assignedAgent: client.assignedAgent
+        };
+      } else if (req.user.role === 'tl') {
+        // TL gets all data except phone numbers
+        return {
+          _id: client._id,
+          clientId: client.clientId,
+          firstName: client.firstName,
+          lastName: client.lastName,
+          email: client.email,
+          phone: null, // Hide phone numbers for TL
           country: client.country,
           status: client.status,
           campaign: client.campaign,
@@ -668,14 +769,72 @@ const addNote = async (req, res) => {
     client.notes = client.notes || [];
     client.notes.push(note);
     
+    console.log(`Adding note to client ${client.clientId}:`, note.content);
+    console.log(`Note created at:`, note.createdAt);
+    console.log(`Client now has ${client.notes.length} notes`);
+    
+    // Log all notes before saving
+    console.log('All notes before saving:');
+    client.notes.forEach((n, index) => {
+      console.log(`  Note ${index}: "${n.content}" - Created: ${n.createdAt}`);
+    });
+    
     await client.save();
     
-    // Populate the createdBy field for the new note
-    await client.populate('notes.createdBy', 'firstName lastName');
+    // Populate the createdBy and lastViewedBy fields for the new note
+    await client.populate([
+      { path: 'notes.createdBy', select: 'firstName lastName role' },
+      { path: 'notes.lastViewedBy', select: 'firstName lastName role' }
+    ]);
+    
+    // Log all notes after saving and populating
+    console.log('All notes after saving and populating:');
+    client.notes.forEach((n, index) => {
+      console.log(`  Note ${index}: "${n.content}" - Created: ${n.createdAt}`);
+      console.log(`    CreatedBy: ${n.createdBy ? `${n.createdBy.firstName} ${n.createdBy.lastName}` : 'No creator'}`);
+    });
     
     res.status(201).json(client);
   } catch (error) {
     console.error('Add note error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Mark note as viewed by current user
+// @route   PUT /api/clients/:id/notes/:noteId/view
+// @access  Private
+const markNoteAsViewed = async (req, res) => {
+  try {
+    const client = await Client.findById(req.params.id);
+    
+    if (!client) {
+      return res.status(404).json({ message: 'Client not found' });
+    }
+
+    // Check permissions
+    if (req.user.role === 'agent' && client.assignedAgent.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    // Find the specific note
+    const note = client.notes.id(req.params.noteId);
+    if (!note) {
+      return res.status(404).json({ message: 'Note not found' });
+    }
+
+    // Update the lastViewedBy and lastViewedAt fields
+    note.lastViewedBy = req.user._id;
+    note.lastViewedAt = new Date();
+    
+    await client.save();
+    
+    // Populate the lastViewedBy field for response
+    await client.populate('notes.lastViewedBy', 'firstName lastName role');
+    
+    res.json({ message: 'Note marked as viewed', note: note });
+  } catch (error) {
+    console.error('Mark note as viewed error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -778,5 +937,6 @@ module.exports = {
   deleteClients,
   searchClients,
   addNote,
+  markNoteAsViewed,
   deleteNote
 };

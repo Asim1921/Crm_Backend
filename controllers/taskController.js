@@ -27,6 +27,7 @@ const getTasks = async (req, res) => {
     if (req.user.role === 'agent' && !req.query.clientId) {
       query.assignedTo = req.user._id;
     }
+    // TL role can see all tasks, no additional filtering needed
 
     const tasks = await Task.find(query)
       .populate('client', 'firstName lastName email country')

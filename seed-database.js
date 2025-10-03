@@ -87,7 +87,7 @@ const statuses = [
   'Wrong Name'
 ];
 
-const campaigns = ['Data', 'Affiliate'];
+const campaigns = ['Data', 'Affiliate', 'Data2', 'Data3', 'camping No Interest Rete', 'DataR', 'Data2R', 'AffiliateR'];
 
 // Generate unique client ID
 const generateUniqueClientId = async () => {
@@ -128,6 +128,33 @@ const createAdminUser = async () => {
     return adminUser;
   } catch (error) {
     console.error('❌ Error creating admin user:', error.message);
+    throw error;
+  }
+};
+
+// Create team leader user
+const createTeamLeaderUser = async () => {
+  try {
+    // Check if team leader already exists
+    const existingTL = await User.findOne({ email: 'teamleader@gmail.com' });
+    if (existingTL) {
+      console.log('✅ Team Leader user already exists');
+      return existingTL;
+    }
+
+    // Create team leader user
+    const tlUser = await User.create({
+      firstName: 'Team',
+      lastName: 'Leader',
+      email: 'teamleader@gmail.com',
+      password: 'TL123',
+      role: 'tl'
+    });
+
+    console.log('✅ Team Leader user created successfully');
+    return tlUser;
+  } catch (error) {
+    console.error('❌ Error creating team leader user:', error.message);
     throw error;
   }
 };
@@ -261,6 +288,9 @@ const seedDatabase = async () => {
 
     // Create admin user
     const admin = await createAdminUser();
+
+    // Create team leader user
+    const teamLeader = await createTeamLeaderUser();
 
     // Create agent users
     const agents = await createAgentUsers();
