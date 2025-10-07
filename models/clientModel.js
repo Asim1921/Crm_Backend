@@ -51,7 +51,7 @@ const clientSchema = new mongoose.Schema({
   },
   campaign: {
     type: String,
-    enum: ['Data', 'Data2', 'Data3', 'Data4', 'Data5', 'Affiliate'],
+    enum: ['Data', 'Data2', 'Data3', 'Data4', 'Data5', 'Affiliate', 'camping No Interest Rete', 'DataR', 'Data2R', 'AffiliateR'],
     default: 'Data'
   },
   assignedAgent: {
