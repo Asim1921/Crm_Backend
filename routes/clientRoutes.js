@@ -27,7 +27,7 @@ router.route('/countries')
   .get(agentOrTeamLead, getUniqueCountries);
 
 router.route('/agents')
-  .get(admin, getAvailableAgents);
+  .get(agentOrTeamLead, getAvailableAgents);
 
 router.route('/assign')
   .put(admin, assignClients);
