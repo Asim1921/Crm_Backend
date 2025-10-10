@@ -8,18 +8,18 @@ const {
   updateTask,
   deleteTask
 } = require('../controllers/taskController');
-const { protect, agent } = require('../middleware/authMiddleware');
+const { protect, agent, agentOrTeamLead } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
 router.use(protect);
 
 router.route('/')
-  .get(agent, getTasks)
-  .post(agent, createTask);
+  .get(agentOrTeamLead, getTasks)
+  .post(agentOrTeamLead, createTask);
 
 router.route('/:id')
-  .put(agent, updateTask)
-  .delete(agent, deleteTask);
+  .put(agentOrTeamLead, updateTask)
+  .delete(agentOrTeamLead, deleteTask);
 
 module.exports = router;

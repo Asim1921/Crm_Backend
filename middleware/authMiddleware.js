@@ -81,4 +81,20 @@ const agent = (req, res, next) => {
   }
 };
 
-module.exports = { protect, admin, agent };
+const teamLead = (req, res, next) => {
+  if (req.user && (req.user.role === 'tl' || req.user.role === 'admin')) {
+    next();
+  } else {
+    res.status(403).json({ message: 'Not authorized as team lead' });
+  }
+};
+
+const agentOrTeamLead = (req, res, next) => {
+  if (req.user && (req.user.role === 'agent' || req.user.role === 'tl' || req.user.role === 'admin')) {
+    next();
+  } else {
+    res.status(403).json({ message: 'Not authorized as agent or team lead' });
+  }
+};
+
+module.exports = { protect, admin, agent, teamLead, agentOrTeamLead };

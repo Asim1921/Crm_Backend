@@ -16,7 +16,7 @@ const {
   markNoteAsViewed,
   deleteNote
 } = require('../controllers/clientController');
-const { protect, admin, agent } = require('../middleware/authMiddleware');
+const { protect, admin, agent, agentOrTeamLead } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
@@ -24,7 +24,7 @@ router.use(protect);
 
 // Specific routes must come before parameterized routes
 router.route('/countries')
-  .get(agent, getUniqueCountries);
+  .get(agentOrTeamLead, getUniqueCountries);
 
 router.route('/agents')
   .get(admin, getAvailableAgents);
@@ -36,33 +36,33 @@ router.route('/bulk-delete')
   .delete(admin, deleteClients);
 
 router.route('/export')
-  .get(agent, exportClients);
+  .get(agentOrTeamLead, exportClients);
 
 router.route('/import')
   .post(admin, importClients);
 
 router.route('/search')
-  .get(agent, searchClients);
+  .get(agentOrTeamLead, searchClients);
 
 // General routes
 router.route('/')
-  .get(agent, getClients)
-  .post(agent, createClient);
+  .get(agentOrTeamLead, getClients)
+  .post(agentOrTeamLead, createClient);
 
 // Parameterized routes must come last
 router.route('/:id')
-  .get(agent, getClientById)
-  .put(agent, updateClient)
-  .delete(agent, deleteClient);
+  .get(agentOrTeamLead, getClientById)
+  .put(agentOrTeamLead, updateClient)
+  .delete(agentOrTeamLead, deleteClient);
 
 // Note routes
 router.route('/:id/notes')
-  .post(agent, addNote);
+  .post(agentOrTeamLead, addNote);
 
 router.route('/:id/notes/:noteId')
-  .delete(agent, deleteNote);
+  .delete(agentOrTeamLead, deleteNote);
 
 router.route('/:id/notes/:noteId/view')
-  .put(agent, markNoteAsViewed);
+  .put(agentOrTeamLead, markNoteAsViewed);
 
 module.exports = router;

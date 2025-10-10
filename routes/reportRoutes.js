@@ -5,15 +5,15 @@ const {
   getUserStats,
   getLeadStatusOverview
 } = require('../controllers/reportController');
-const { protect, agent } = require('../middleware/authMiddleware');
+const { protect, agent, agentOrTeamLead } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
 router.use(protect);
 
-router.get('/dashboard', agent, getDashboardStats);
-router.get('/analytics', agent, getAnalytics);
-router.get('/lead-status-overview', agent, getLeadStatusOverview);
+router.get('/dashboard', agentOrTeamLead, getDashboardStats);
+router.get('/analytics', agentOrTeamLead, getAnalytics);
+router.get('/lead-status-overview', agentOrTeamLead, getLeadStatusOverview);
 router.get('/users', getUserStats);
 
 module.exports = router;

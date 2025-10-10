@@ -246,9 +246,9 @@ const updateUser = async (req, res) => {
       }
     }
 
-    // Validate role - only allow agent, manager, or admin roles
-    if (role && !['agent', 'manager', 'admin'].includes(role)) {
-      return res.status(400).json({ message: 'Invalid role. Only agent, manager, or admin roles are allowed.' });
+    // Validate role - only allow agent, manager, tl, or admin roles
+    if (role && !['agent', 'manager', 'tl', 'admin'].includes(role)) {
+      return res.status(400).json({ message: 'Invalid role. Only agent, manager, tl, or admin roles are allowed.' });
     }
 
     // Build update object
