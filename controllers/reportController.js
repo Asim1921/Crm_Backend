@@ -173,6 +173,7 @@ const getDashboardStats = async (req, res) => {
 const getLeadStatusOverview = async (req, res) => {
   try {
     const search = req.query.search || '';
+    const status = req.query.status || '';
     const country = req.query.country || '';
     const campaign = req.query.campaign || '';
     const agent = req.query.agent || '';
@@ -184,7 +185,7 @@ const getLeadStatusOverview = async (req, res) => {
     const unassigned = req.query.unassigned === 'true';
 
     console.log('Lead Status Overview - Query params:', {
-      search, country, campaign, agent, unassigned, dateFilterType
+      search, status, country, campaign, agent, unassigned, dateFilterType
     });
 
     // Build query (same logic as getClients)
@@ -194,12 +195,37 @@ const getLeadStatusOverview = async (req, res) => {
       query.$text = { $search: search };
     }
     
+    if (status) {
+      // Handle both single value and array
+      if (Array.isArray(status)) {
+        query.status = { $in: status };
+      } else if (typeof status === 'string' && status.includes(',')) {
+        query.status = { $in: status.split(',') };
+      } else {
+        query.status = status;
+      }
+    }
+    
     if (country) {
-      query.country = { $regex: country, $options: 'i' };
+      // Handle both single value and array
+      if (Array.isArray(country)) {
+        query.country = { $in: country };
+      } else if (typeof country === 'string' && country.includes(',')) {
+        query.country = { $in: country.split(',') };
+      } else {
+        query.country = { $regex: country, $options: 'i' };
+      }
     }
     
     if (campaign) {
-      query.campaign = campaign;
+      // Handle both single value and array
+      if (Array.isArray(campaign)) {
+        query.campaign = { $in: campaign };
+      } else if (typeof campaign === 'string' && campaign.includes(',')) {
+        query.campaign = { $in: campaign.split(',') };
+      } else {
+        query.campaign = campaign;
+      }
     }
     
     // Handle agent and unassigned filters
@@ -209,11 +235,22 @@ const getLeadStatusOverview = async (req, res) => {
         { assignedAgent: null }
       ];
     } else if (agent) {
-      // Convert agent ID to ObjectId if it's a valid MongoDB ObjectId string
-      if (mongoose.Types.ObjectId.isValid(agent)) {
-        query.assignedAgent = new mongoose.Types.ObjectId(agent);
+      // Handle both single value and array
+      if (Array.isArray(agent)) {
+        // Convert array of agent IDs to ObjectIds
+        const agentIds = agent.map(id => mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id);
+        query.assignedAgent = { $in: agentIds };
+      } else if (typeof agent === 'string' && agent.includes(',')) {
+        // Split comma-separated string and convert to ObjectIds
+        const agentIds = agent.split(',').map(id => mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id);
+        query.assignedAgent = { $in: agentIds };
       } else {
-        query.assignedAgent = agent;
+        // Single agent ID
+        if (mongoose.Types.ObjectId.isValid(agent)) {
+          query.assignedAgent = new mongoose.Types.ObjectId(agent);
+        } else {
+          query.assignedAgent = agent;
+        }
       }
     }
 

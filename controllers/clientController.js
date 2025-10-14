@@ -30,15 +30,36 @@ const getClients = async (req, res) => {
     }
     
     if (status) {
-      query.status = status;
+      // Handle both single value and array
+      if (Array.isArray(status)) {
+        query.status = { $in: status };
+      } else if (typeof status === 'string' && status.includes(',')) {
+        query.status = { $in: status.split(',') };
+      } else {
+        query.status = status;
+      }
     }
     
     if (country) {
-      query.country = { $regex: country, $options: 'i' };
+      // Handle both single value and array
+      if (Array.isArray(country)) {
+        query.country = { $in: country };
+      } else if (typeof country === 'string' && country.includes(',')) {
+        query.country = { $in: country.split(',') };
+      } else {
+        query.country = { $regex: country, $options: 'i' };
+      }
     }
     
     if (campaign) {
-      query.campaign = campaign;
+      // Handle both single value and array
+      if (Array.isArray(campaign)) {
+        query.campaign = { $in: campaign };
+      } else if (typeof campaign === 'string' && campaign.includes(',')) {
+        query.campaign = { $in: campaign.split(',') };
+      } else {
+        query.campaign = campaign;
+      }
     }
     
     // Handle agent and unassigned filters
@@ -49,8 +70,14 @@ const getClients = async (req, res) => {
         { assignedAgent: null }
       ];
     } else if (agent) {
-      // If specific agent filter is active, show only clients assigned to that agent
-      query.assignedAgent = agent;
+      // Handle both single value and array
+      if (Array.isArray(agent)) {
+        query.assignedAgent = { $in: agent };
+      } else if (typeof agent === 'string' && agent.includes(',')) {
+        query.assignedAgent = { $in: agent.split(',') };
+      } else {
+        query.assignedAgent = agent;
+      }
     }
 
     // Date filtering
