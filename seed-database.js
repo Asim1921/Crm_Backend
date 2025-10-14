@@ -147,7 +147,7 @@ const createTeamLeaderUser = async () => {
       firstName: 'Team',
       lastName: 'Leader',
       email: 'teamleader@gmail.com',
-      password: 'TL123',
+      password: 'TL123456',
       role: 'tl'
     });
 
