@@ -46,7 +46,7 @@ const clientSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['New Lead', 'Call Again', 'No Answer', 'Hang Up', 'Not Interested', 'FTD', 'FTD RETENTION', 'NA5UP', 'Wrong Number', 'Wrong Name', 'Perfilado'],
+    enum: ['New Lead', 'Call Again', 'No Answer', 'Hang Up', 'Not Interested', 'FTD', 'FTD RETENTION', 'NA5UP', 'Wrong Number', 'Wrong Name', 'Perfilado', 'campaign no interest'],
     default: 'New Lead'
   },
   campaign: {

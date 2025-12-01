@@ -85,7 +85,8 @@ const statuses = [
   'Hang Up',
   'Wrong Number',
   'Wrong Name',
-  'Perfilado'
+  'Perfilado',
+  'campaign no interest'
 ];
 
 const campaigns = ['Data', 'Data2', 'Data3', 'Data4', 'Data5', 'Affiliate', 'not campaign', 'DataR', 'Data2R', 'AffiliateR'];
