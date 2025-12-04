@@ -86,10 +86,10 @@ const statuses = [
   'Wrong Number',
   'Wrong Name',
   'Perfilado',
-  'campaign no interest'
+  'no interest rete'
 ];
 
-const campaigns = ['Data', 'Data2', 'Data3', 'Data4', 'Data5', 'Affiliate', 'not campaign', 'DataR', 'Data2R', 'AffiliateR'];
+const campaigns = ['Data', 'Data2', 'Data3', 'Data4', 'Data5', 'data 6', 'data 7', 'data 8', 'data 9', 'data10', 'Affiliate', 'DataR', 'Data2R', 'data 3 R', 'Data4R', 'Data5R', 'Data6R', 'Data7R', 'Data8R', 'Data9R', 'Data10R', 'AffiliateR'];
 
 // Generate unique client ID
 const generateUniqueClientId = async () => {
